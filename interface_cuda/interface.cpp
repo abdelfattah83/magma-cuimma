@@ -1055,14 +1055,14 @@ extern "C" void
 magma_queue_set_cuimma_nplits(magma_queue_t queue, magma_int_t nsplits)
 {
     if(nsplits >= 3 && nsplits <= 18) {
-        queue->cublas_imma_nsplits__ = nsplits;
+        queue->cuimma_nsplits__ = nsplits;
     }
 }
 
 extern "C" magma_int_t
 magma_queue_get_cuimma_nplits(magma_queue_t queue)
 {
-    return queue->cublas_imma_nsplits__;
+    return queue->cuimma_nsplits__;
 }
 #endif
 

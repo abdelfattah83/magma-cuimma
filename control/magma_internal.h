@@ -106,7 +106,7 @@ public:
     /// MAGMA assumes the handle won't be changed, e.g., its stream won't be modified.
     cusparseHandle_t cusparse_handle() { return cusparse__; }
 
-    magma_int_t cublas_imma_nsplits__;
+    magma_int_t cuimma_nsplits__;
 
     #endif
 
