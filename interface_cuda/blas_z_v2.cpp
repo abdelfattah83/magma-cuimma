@@ -1385,22 +1385,22 @@ magma_dgemm_cuimma(
     magma_int_t nsplits = queue->cuimma_nsplits__;
 
     switch(nsplits) {
-        case 3: putenv((char*)"CUBLASLT_EMULATED_DGEMM_NUM_SLICES=3");  break;
-        case 3: putenv((char*)"CUBLASLT_EMULATED_DGEMM_NUM_SLICES=4");  break;
-        case 3: putenv((char*)"CUBLASLT_EMULATED_DGEMM_NUM_SLICES=5");  break;
-        case 3: putenv((char*)"CUBLASLT_EMULATED_DGEMM_NUM_SLICES=6");  break;
-        case 3: putenv((char*)"CUBLASLT_EMULATED_DGEMM_NUM_SLICES=7");  break;
-        case 3: putenv((char*)"CUBLASLT_EMULATED_DGEMM_NUM_SLICES=8");  break;
-        case 3: putenv((char*)"CUBLASLT_EMULATED_DGEMM_NUM_SLICES=9");  break;
-        case 3: putenv((char*)"CUBLASLT_EMULATED_DGEMM_NUM_SLICES=10"); break;
-        case 3: putenv((char*)"CUBLASLT_EMULATED_DGEMM_NUM_SLICES=11"); break;
-        case 3: putenv((char*)"CUBLASLT_EMULATED_DGEMM_NUM_SLICES=12"); break;
-        case 3: putenv((char*)"CUBLASLT_EMULATED_DGEMM_NUM_SLICES=13"); break;
-        case 3: putenv((char*)"CUBLASLT_EMULATED_DGEMM_NUM_SLICES=14"); break;
-        case 3: putenv((char*)"CUBLASLT_EMULATED_DGEMM_NUM_SLICES=15"); break;
-        case 3: putenv((char*)"CUBLASLT_EMULATED_DGEMM_NUM_SLICES=16"); break;
-        case 3: putenv((char*)"CUBLASLT_EMULATED_DGEMM_NUM_SLICES=17"); break;
-        case 3: putenv((char*)"CUBLASLT_EMULATED_DGEMM_NUM_SLICES=18"); break;
+        case  3: putenv((char*)"CUBLASLT_EMULATED_DGEMM_NUM_SLICES=3");  break;
+        case  4: putenv((char*)"CUBLASLT_EMULATED_DGEMM_NUM_SLICES=4");  break;
+        case  5: putenv((char*)"CUBLASLT_EMULATED_DGEMM_NUM_SLICES=5");  break;
+        case  6: putenv((char*)"CUBLASLT_EMULATED_DGEMM_NUM_SLICES=6");  break;
+        case  7: putenv((char*)"CUBLASLT_EMULATED_DGEMM_NUM_SLICES=7");  break;
+        case  8: putenv((char*)"CUBLASLT_EMULATED_DGEMM_NUM_SLICES=8");  break;
+        case  9: putenv((char*)"CUBLASLT_EMULATED_DGEMM_NUM_SLICES=9");  break;
+        case 10: putenv((char*)"CUBLASLT_EMULATED_DGEMM_NUM_SLICES=10"); break;
+        case 11: putenv((char*)"CUBLASLT_EMULATED_DGEMM_NUM_SLICES=11"); break;
+        case 12: putenv((char*)"CUBLASLT_EMULATED_DGEMM_NUM_SLICES=12"); break;
+        case 13: putenv((char*)"CUBLASLT_EMULATED_DGEMM_NUM_SLICES=13"); break;
+        case 14: putenv((char*)"CUBLASLT_EMULATED_DGEMM_NUM_SLICES=14"); break;
+        case 15: putenv((char*)"CUBLASLT_EMULATED_DGEMM_NUM_SLICES=15"); break;
+        case 16: putenv((char*)"CUBLASLT_EMULATED_DGEMM_NUM_SLICES=16"); break;
+        case 17: putenv((char*)"CUBLASLT_EMULATED_DGEMM_NUM_SLICES=17"); break;
+        case 18: putenv((char*)"CUBLASLT_EMULATED_DGEMM_NUM_SLICES=18"); break;
         default:putenv((char*)"CUBLASLT_EMULATED_DGEMM_NUM_SLICES=18");
     }
 
