@@ -20,7 +20,7 @@
 
 extern "C"
 void
-magma_dgemm_ozimmu(
+magma_dgemm_cuimma(
     magma_trans_t transA, magma_trans_t transB,
     magma_int_t m, magma_int_t n, magma_int_t k,
     double alpha,

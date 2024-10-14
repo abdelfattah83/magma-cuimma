@@ -106,9 +106,7 @@ public:
     /// MAGMA assumes the handle won't be changed, e.g., its stream won't be modified.
     cusparseHandle_t cusparse_handle() { return cusparse__; }
 
-    mtk::ozimmu::handle_t ozimmu_handle__; // associated ozIMMU handle
-
-    mtk::ozimmu::compute_mode_t ozimmu_compute_mode__; // compute mode for ozIMMU
+    magma_int_t cublas_imma_nsplits__;
 
     #endif
 

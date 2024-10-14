@@ -1346,7 +1346,7 @@ magma_zgemm(
 #if 0
     #ifdef PRECISION_d
 	if(m <= 0 || n <= 0 || k <= 0) return;
-    magma_dgemm_ozimmu(transA, transB, m, n, k, alpha, dA, ldda, dB, lddb, beta, dC, lddc, queue);
+    magma_dgemm_cuimma(transA, transB, m, n, k, alpha, dA, ldda, dB, lddb, beta, dC, lddc, queue);
     #else
     cublasZgemm(
         queue->cublas_handle(),
@@ -1372,7 +1372,7 @@ magma_zgemm(
 
 #ifdef PRECISION_d
 extern "C" void
-magma_dgemm_ozimmu(
+magma_dgemm_cuimma(
     magma_trans_t transA, magma_trans_t transB,
     magma_int_t m, magma_int_t n, magma_int_t k,
     double alpha,
@@ -1382,21 +1382,36 @@ magma_dgemm_ozimmu(
     double      * dC, magma_int_t lddc,
     magma_queue_t queue )
 {
-    const mtk::ozimmu::operation_t op_A = (transA == MagmaNoTrans) ? mtk::ozimmu::op_n : mtk::ozimmu::op_t;
-    const mtk::ozimmu::operation_t op_B = (transB == MagmaNoTrans) ? mtk::ozimmu::op_n : mtk::ozimmu::op_t;
+    magma_int_t nsplits = queue->cuimma_nsplits__;
 
-    const mtk::ozimmu::compute_mode_t compute_mode = queue->ozimmu_compute_mode__;
-    const mtk::ozimmu::element_kind_t element_kind = mtk::ozimmu::real;
+    switch(nsplits) {
+        case 3: putenv((char*)"CUBLASLT_EMULATED_DGEMM_NUM_SLICES=3");  break;
+        case 3: putenv((char*)"CUBLASLT_EMULATED_DGEMM_NUM_SLICES=4");  break;
+        case 3: putenv((char*)"CUBLASLT_EMULATED_DGEMM_NUM_SLICES=5");  break;
+        case 3: putenv((char*)"CUBLASLT_EMULATED_DGEMM_NUM_SLICES=6");  break;
+        case 3: putenv((char*)"CUBLASLT_EMULATED_DGEMM_NUM_SLICES=7");  break;
+        case 3: putenv((char*)"CUBLASLT_EMULATED_DGEMM_NUM_SLICES=8");  break;
+        case 3: putenv((char*)"CUBLASLT_EMULATED_DGEMM_NUM_SLICES=9");  break;
+        case 3: putenv((char*)"CUBLASLT_EMULATED_DGEMM_NUM_SLICES=10"); break;
+        case 3: putenv((char*)"CUBLASLT_EMULATED_DGEMM_NUM_SLICES=11"); break;
+        case 3: putenv((char*)"CUBLASLT_EMULATED_DGEMM_NUM_SLICES=12"); break;
+        case 3: putenv((char*)"CUBLASLT_EMULATED_DGEMM_NUM_SLICES=13"); break;
+        case 3: putenv((char*)"CUBLASLT_EMULATED_DGEMM_NUM_SLICES=14"); break;
+        case 3: putenv((char*)"CUBLASLT_EMULATED_DGEMM_NUM_SLICES=15"); break;
+        case 3: putenv((char*)"CUBLASLT_EMULATED_DGEMM_NUM_SLICES=16"); break;
+        case 3: putenv((char*)"CUBLASLT_EMULATED_DGEMM_NUM_SLICES=17"); break;
+        case 3: putenv((char*)"CUBLASLT_EMULATED_DGEMM_NUM_SLICES=18"); break;
+        default:putenv((char*)"CUBLASLT_EMULATED_DGEMM_NUM_SLICES=18");
+    }
 
-    mtk::ozimmu::gemm(
-            queue->ozimmu_handle__, op_A, op_B,
-            (size_t)m, (size_t)n, (size_t)k,
-            (const void *)&alpha,
-            (const void *const)dA, (const size_t)ldda,
-            (const void *const)dB, (const size_t)lddb,
-            (const void *)&beta,
-            (void *const      )dC, (size_t      )lddc,
-            compute_mode, element_kind);
+    cublasGemmEx(
+        queue->cublas_handle(),
+        cublas_trans_const( transA ),
+        cublas_trans_const( transB ),
+        (int)m, (int)n, (int)k,
+        (double*)&alpha, (void*)dA, CUDA_R_64F, (int)ldda,
+                         (void*)dB, CUDA_R_64F, (int)lddb,
+        (double*)&beta,  (void*)dC, CUDA_R_64F, (int)lddc, CUBLAS_COMPUTE_64F_FAST_8I, CUBLAS_GEMM_DEFAULT);
 }
 
 #endif

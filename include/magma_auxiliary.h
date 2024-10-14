@@ -291,10 +291,10 @@ magma_queue_create_from_cuda_internal(
     const char* func, const char* file, int line );
 
 void
-magma_queue_set_ozimmu_nplits(magma_queue_t queue, magma_int_t nsplits);
+magma_queue_set_cuimma_nplits(magma_queue_t queue, magma_int_t nsplits);
 
 magma_int_t
-magma_queue_get_ozimmu_nplits(magma_queue_t queue);
+magma_queue_get_cuimma_nplits(magma_queue_t queue);
 
 #endif
 

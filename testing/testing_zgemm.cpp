@@ -145,7 +145,7 @@ int main( int argc, char** argv)
             double Cnorm = lapackf77_zlange( "F", &M,  &N,  hC, &ldc, work );
 
             #ifdef MAGMA_HAVE_CUDA
-            magma_queue_set_ozimmu_nplits(opts.queue, opts.oz_nsplits);
+            magma_queue_set_cuimma_nplits(opts.queue, opts.oz_nsplits);
             #endif
             /* =====================================================================
                Performs operation using MAGMABLAS (currently only with CUDA)
@@ -156,7 +156,7 @@ int main( int argc, char** argv)
                 magma_flush_cache( opts.cache );
                 magma_time = magma_sync_wtime( opts.queue );
                 #if defined(MAGMA_HAVE_CUDA) && defined(PRECISION_d)
-                magma_dgemm_ozimmu( opts.transA, opts.transB, M, N, K,
+                magma_dgemm_cuimma( opts.transA, opts.transB, M, N, K,
                              alpha, dA, ldda,
                                     dB, lddb,
                               beta,  dC, lddc,

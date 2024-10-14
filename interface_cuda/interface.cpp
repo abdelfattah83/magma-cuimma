@@ -999,7 +999,6 @@ magma_queue_create_internal(
 #if defined(MAGMA_HAVE_CUDA)
     queue->cublas__   = NULL;
     queue->cusparse__ = NULL;
-	queue->ozimmu_handle__ = NULL;
 #elif defined(MAGMA_HAVE_HIP)
     queue->hipblas__  = NULL;
     queue->hipsparse__ = NULL;
@@ -1028,10 +1027,6 @@ magma_queue_create_internal(
     stat2 = cusparseSetStream( queue->cusparse__, queue->stream__ );
     check_xerror( stat2, func, file, line );
 
-	mtk::ozimmu::create(&queue->ozimmu_handle__, mtk::ozimmu::malloc_sync);
-	mtk::ozimmu::set_cuda_stream(queue->ozimmu_handle__, queue->stream__);
-	queue->ozimmu_compute_mode__ = mtk::ozimmu::fp64_int8_18; // most accurate version of ozIMMU-GEMM
-
 #elif defined(MAGMA_HAVE_HIP)
 
     hipblasStatus_t stat;
@@ -1057,51 +1052,17 @@ magma_queue_create_internal(
 
 #ifdef MAGMA_HAVE_CUDA
 extern "C" void
-magma_queue_set_ozimmu_nplits(magma_queue_t queue, magma_int_t nsplits)
+magma_queue_set_cuimma_nplits(magma_queue_t queue, magma_int_t nsplits)
 {
-    switch(nsplits) {
-        case  3: queue->ozimmu_compute_mode__ = mtk::ozimmu::fp64_int8_3;  break;
-        case  4: queue->ozimmu_compute_mode__ = mtk::ozimmu::fp64_int8_4;  break;
-        case  5: queue->ozimmu_compute_mode__ = mtk::ozimmu::fp64_int8_5;  break;
-        case  6: queue->ozimmu_compute_mode__ = mtk::ozimmu::fp64_int8_6;  break;
-        case  7: queue->ozimmu_compute_mode__ = mtk::ozimmu::fp64_int8_7;  break;
-        case  8: queue->ozimmu_compute_mode__ = mtk::ozimmu::fp64_int8_8;  break;
-        case  9: queue->ozimmu_compute_mode__ = mtk::ozimmu::fp64_int8_9;  break;
-        case 10: queue->ozimmu_compute_mode__ = mtk::ozimmu::fp64_int8_10; break;
-        case 11: queue->ozimmu_compute_mode__ = mtk::ozimmu::fp64_int8_11; break;
-        case 12: queue->ozimmu_compute_mode__ = mtk::ozimmu::fp64_int8_12; break;
-        case 13: queue->ozimmu_compute_mode__ = mtk::ozimmu::fp64_int8_13; break;
-        case 14: queue->ozimmu_compute_mode__ = mtk::ozimmu::fp64_int8_14; break;
-        case 15: queue->ozimmu_compute_mode__ = mtk::ozimmu::fp64_int8_15; break;
-        case 16: queue->ozimmu_compute_mode__ = mtk::ozimmu::fp64_int8_16; break;
-        case 17: queue->ozimmu_compute_mode__ = mtk::ozimmu::fp64_int8_17; break;
-        case 18: queue->ozimmu_compute_mode__ = mtk::ozimmu::fp64_int8_18; break;
-        default: queue->ozimmu_compute_mode__ = mtk::ozimmu::fp64_int8_18;
+    if(nsplits >= 3 && nsplits <= 18) {
+        queue->cublas_imma_nsplits__ = nsplits;
     }
 }
 
 extern "C" magma_int_t
-magma_queue_get_ozimmu_nplits(magma_queue_t queue)
+magma_queue_get_cuimma_nplits(magma_queue_t queue)
 {
-    switch(queue->ozimmu_compute_mode__) {
-        case mtk::ozimmu::fp64_int8_3 : return  3; break;
-        case mtk::ozimmu::fp64_int8_4 : return  4; break;
-        case mtk::ozimmu::fp64_int8_5 : return  5; break;
-        case mtk::ozimmu::fp64_int8_6 : return  6; break;
-        case mtk::ozimmu::fp64_int8_7 : return  7; break;
-        case mtk::ozimmu::fp64_int8_8 : return  8; break;
-        case mtk::ozimmu::fp64_int8_9 : return  9; break;
-        case mtk::ozimmu::fp64_int8_10: return 10; break;
-        case mtk::ozimmu::fp64_int8_11: return 11; break;
-        case mtk::ozimmu::fp64_int8_12: return 12; break;
-        case mtk::ozimmu::fp64_int8_13: return 13; break;
-        case mtk::ozimmu::fp64_int8_14: return 14; break;
-        case mtk::ozimmu::fp64_int8_15: return 15; break;
-        case mtk::ozimmu::fp64_int8_16: return 16; break;
-        case mtk::ozimmu::fp64_int8_17: return 17; break;
-        case mtk::ozimmu::fp64_int8_18: return 18; break;
-        default: return 0;
-    }
+    return queue->cublas_imma_nsplits__;
 }
 #endif
 
@@ -1188,9 +1149,7 @@ magma_queue_create_from_cuda_internal(
     stat2 = cusparseSetStream( queue->cusparse__, queue->stream__ );
     check_xerror( stat2, func, file, line );
 
-    mtk::ozimmu::create(&queue->ozimmu_handle__, mtk::ozimmu::malloc_async);
-	mtk::ozimmu::set_cuda_stream(queue->ozimmu_handle__, queue->stream__);
-	queue->ozimmu_compute_mode__ = mtk::ozimmu::fp64_int8_3; // most accurate version of ozIMMU-GEMM
+	queue->cuimma_nsplits__ = 18; // most accurate version
 
     MAGMA_UNUSED( stat );
     MAGMA_UNUSED( stat2 );
@@ -1313,7 +1272,6 @@ magma_queue_destroy_internal(
 {
     if ( queue != NULL ) {
     #if defined(MAGMA_HAVE_CUDA)
-	    mtk::ozimmu::destroy(queue->ozimmu_handle__);
 
         if ( queue->cublas__ != NULL && (queue->own__ & own_cublas)) {
             cublasStatus_t stat = cublasDestroy( queue->cublas__ );
