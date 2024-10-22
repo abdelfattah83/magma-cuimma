@@ -1345,7 +1345,9 @@ magma_zgemm(
 {
 #if 0
     #ifdef PRECISION_d
+	magma_int_t nsplits = 8;
 	if(m <= 0 || n <= 0 || k <= 0) return;
+	magma_queue_set_cuimma_nplits(queue, nsplits);
     magma_dgemm_cuimma(transA, transB, m, n, k, alpha, dA, ldda, dB, lddb, beta, dC, lddc, queue);
     #else
     cublasZgemm(

@@ -47,15 +47,15 @@ int main( int argc, char** argv)
     magma_int_t Am, An, Bm, Bn;
     magma_int_t sizeA, sizeB, sizeC;
     magma_int_t lda, ldb, ldc, ldda, lddb, lddc;
-    magma_int_t ione     = 1;
+    magma_int_t ione = 1, ithree = 3;
     magma_int_t ISEED[4] = {0,0,0,1};
     int status = 0;
 
     magmaDoubleComplex *hA, *hB, *hC, *hCmagma, *hCdev;
     magmaDoubleComplex_ptr dA, dB, dC;
     magmaDoubleComplex c_neg_one = MAGMA_Z_NEG_ONE;
-    magmaDoubleComplex alpha = MAGMA_Z_MAKE(  0.29, -0.86 );
-    magmaDoubleComplex beta  = MAGMA_Z_MAKE( -0.48,  0.38 );
+    magmaDoubleComplex alpha = MAGMA_Z_ONE; //MAGMA_Z_MAKE(  0.29, -0.86 );
+    magmaDoubleComplex beta  = MAGMA_Z_ZERO; //MAGMA_Z_MAKE( -0.48,  0.38 );
 
     // used only with CUDA
     MAGMA_UNUSED( magma_perf );
@@ -132,9 +132,106 @@ int main( int argc, char** argv)
             TESTING_CHECK( magma_zmalloc( &dC, lddc*N  ));
 
             /* Initialize the matrices */
-            lapackf77_zlarnv( &ione, ISEED, &sizeA, hA );
-            lapackf77_zlarnv( &ione, ISEED, &sizeB, hB );
-            lapackf77_zlarnv( &ione, ISEED, &sizeC, hC );
+            lapackf77_zlarnv( &ithree, ISEED, &sizeA, hA );
+            lapackf77_zlarnv( &ithree, ISEED, &sizeB, hB );
+            lapackf77_zlarnv( &ithree, ISEED, &sizeC, hC );
+
+            /* perform diagonal scaling */
+            #ifdef PRECISION_d
+            if(opts.cond > 1) {
+                bool notransA = (opts.transA == MagmaNoTrans) ? true : false;
+                bool notransB = (opts.transB == MagmaNoTrans) ? true : false;
+
+                double cond_sqrt = sqrt(opts.cond);
+                double* hD = NULL, *hVA = NULL, *hVB = NULL;
+                TESTING_CHECK( magma_dmalloc_cpu( &hD,  K ));
+                TESTING_CHECK( magma_dmalloc_cpu( &hVA, M ));
+                TESTING_CHECK( magma_dmalloc_cpu( &hVB, N ));
+                double scalar = pow( opts.cond, 1/double(K-1) );
+                hD[0] = 1 / cond_sqrt;
+                for(magma_int_t iD = 1; iD < K; iD++) {
+                    hD[iD] = hD[iD-1] * scalar;
+                }
+
+                if(M == 8 && N == 8 && K == 8) {
+                    magma_dprint(Am, An, hA, lda);
+                }
+                // scale columns/row of A for N/T
+                for(magma_int_t ik = 0; ik < K; ik++) {
+                    double* hAt      = ( notransA ) ? hA + lda * ik : hA + ik;
+                    magma_int_t incA = ( notransA ) ?             1 : lda;
+                    blasf77_dscal(&K, &hD[ik], hAt, &incA);
+                }
+
+                if(M == N && M == K) {
+                    // rotate rows/cols right/down of A for N/T
+                    for(magma_int_t i = 0; i < N; i++) {
+                        magma_int_t Vm   = ( notransA ) ? 1 : N;
+                        magma_int_t Vn   = ( notransA ) ? N : 1;
+                        magma_int_t vlda = Vm;
+
+                        double*     hA0 = ( notransA ) ? hA + i : hA + lda * i;
+                        double*     hA1 = hA0;
+                        magma_int_t Sm1 = ( notransA ) ? 1    : N-i;
+                        magma_int_t Sn1 = ( notransA ) ? N-i  : 1;
+
+                        double*     hA2 = ( notransA ) ? hA0 + (N-i) * lda : hA0 + (N-i);
+                        magma_int_t Sm2 = ( notransA ) ? 1 : i;
+                        magma_int_t Sn2 = ( notransA ) ? i : 1;
+
+                        lapackf77_dlacpy( "F", &Sm1, &Sn1, hA1, &lda,  hVA + i, &ione );
+                        lapackf77_dlacpy( "F", &Sm2, &Sn2, hA2, &lda,  hVA + 0, &ione );
+                        lapackf77_dlacpy( "F", &Vm,  &Vn,  hVA, &vlda, hA0,     &lda );
+                    }
+                }
+
+                if(M == 8 && N == 8 && K == 8) {
+                    magma_dprint(Am, An, hA, lda);
+                }
+
+                if(M == 8 && N == 8 && K == 8) {
+                    magma_dprint(Bm, Bn, hB, ldb);
+                }
+
+                // scale rows/cols of B for N/T
+                for(magma_int_t ik = 0; ik < K; ik++) {
+                    double* hBt      = ( notransB ) ? hB + ik : hB + ldb * ik ;
+                    magma_int_t incB = ( notransB ) ?     ldb : 1;
+                    double scal      = 1 / hD[ik];
+                    blasf77_dscal(&K, &scal, hBt, &incB);
+                }
+
+                if(M == N && M == K) {
+                    // rotate cols/rows down/right of B for N/T
+                    for(magma_int_t i = 0; i < N; i++) {
+                        magma_int_t Vm   = ( notransB ) ? N : 1;
+                        magma_int_t Vn   = ( notransB ) ? 1 : N;
+                        magma_int_t vldb = Vm;
+
+                        double*     hB0 = ( notransB ) ? hB + ldb * i : hB + i;
+                        double*     hB1 = hB0;
+                        magma_int_t Sm1 = ( notransB ) ? N-i  : 1;
+                        magma_int_t Sn1 = ( notransB ) ?   1  : N-i;
+
+                        double*     hB2 = ( notransB ) ? hB0 + (N-i) : hB0 + (N-i) * ldb;
+                        magma_int_t Sm2 = ( notransB ) ? i : 1;
+                        magma_int_t Sn2 = ( notransB ) ? 1 : i;
+
+                        lapackf77_dlacpy( "F", &Sm1, &Sn1, hB1, &ldb,  hVB + i, &ione );
+                        lapackf77_dlacpy( "F", &Sm2, &Sn2, hB2, &ldb,  hVB + 0, &ione );
+                        lapackf77_dlacpy( "F", &Vm,  &Vn,  hVB, &vldb, hB0,     &ldb );
+                    }
+                }
+
+                if(M == 8 && N == 8 && K == 8) {
+                    magma_dprint(Bm, Bn, hB, ldb);
+                }
+
+                magma_free_cpu( hD );
+                magma_free_cpu( hVA );
+                magma_free_cpu( hVB );
+            }
+            #endif
 
             magma_zsetmatrix( Am, An, hA, lda, dA(0,0), ldda, opts.queue );
             magma_zsetmatrix( Bm, Bn, hB, ldb, dB(0,0), lddb, opts.queue );
