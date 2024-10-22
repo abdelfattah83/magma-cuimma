@@ -151,6 +151,57 @@ struct magma_device_info
 int g_magma_devices_cnt = 0;
 struct magma_device_info* g_magma_devices = NULL;
 
+// ================ for cuIMMA workspace ===============
+enum class operation_t { DGEMM = 0, ZGEMM = 1 };
+
+enum class gpu_arch_t { AMPERE = 0, HOPPER = 1 };
+
+struct kernel_config_t {
+    int tile_m;
+    int tile_n;
+    int tile_k;
+    int cga_m;
+    int cga_n;
+};
+
+kernel_config_t get_kernel_config(gpu_arch_t arch) {
+    switch (arch) {
+        case gpu_arch_t::AMPERE:
+            return {128, 128, 128, 1, 8};
+        case gpu_arch_t::HOPPER:
+            return {128, 128, 128, 1, 4};
+    }
+}
+
+template <typename INT_TYPE>
+inline INT_TYPE ceil_div(INT_TYPE x, INT_TYPE y) {
+    return (x + y - 1) / y;
+}
+
+template <typename INT_TYPE>
+inline INT_TYPE round_up(INT_TYPE x, INT_TYPE y) {
+    return ceil_div(x, y) * y;
+}
+
+size_t get_workspace_size(operation_t op, int m, int n, int k, int nslices,
+                          kernel_config_t config) {
+    int padded_m = round_up(m, config.tile_n * config.cga_m);
+    int padded_n = round_up(n, config.tile_m * config.cga_n);
+    int padded_k = round_up(k, config.tile_k);
+
+    int multiplier = (op == operation_t::ZGEMM) ? 2 : 1;
+
+    return multiplier *
+               (round_up<size_t>(sizeof(double) * padded_m, 16) +
+                round_up<size_t>(sizeof(double) * padded_n, 16) +
+                round_up<size_t>(sizeof(int8_t) * nslices * padded_m * padded_k,
+                                 16) +
+                round_up<size_t>(sizeof(int8_t) * nslices * padded_n * padded_k,
+                                 16)) +
+           (op == operation_t::ZGEMM ? sizeof(double) * 2 * m * n : 0);
+}
+// =====================================================
+
 
 // =============================================================================
 // initialization
@@ -1045,6 +1096,26 @@ magma_queue_create_internal(
 
 #endif
 
+    queue->cuimma_nsplits__ = 18; // most accurate version
+
+    // custom workspace for cuIMMA
+    #ifdef MAGMA_HAVE_CUDA
+    magma_int_t magma_arch = magma_getdevice_arch();
+    if(magma_arch >= 800 && <= 900) {
+        gpu_arch_t arch = (magma_arch >= 800 && magma_arch < 900) ? gpu_arch_t::AMPERE : gpu_arch_t::HOPPER;
+        size_t cuimma_work_size_in_bytes;
+        magma_int_t largest_dim = 20480;
+        kernel_config_t config = get_kernel_config(arch);
+        cuimma_work_size_in_bytes = get_workspace_size(
+            operation_t::DGEMM, largest_dim, largest_dim, largest_dim,
+            queue->cuimma_nsplits__, config);
+
+        magma_malloc((void**)&queue->cuimma_work__, cuimma_work_size_in_bytes);
+        cublas_status = cublasSetWorkspace(queue->cublas_handle(), queue->cuimma_work__, cuimma_work_size_in_bytes);
+        if (cublas_status != CUBLAS_STATUS_SUCCESS) { printf("Error in setting cuBLAS custom workspace\n"); }
+    }
+    #endif
+
     MAGMA_UNUSED( err );
     MAGMA_UNUSED( stat );
     MAGMA_UNUSED( stat2 );
@@ -1150,6 +1221,23 @@ magma_queue_create_from_cuda_internal(
     check_xerror( stat2, func, file, line );
 
 	queue->cuimma_nsplits__ = 18; // most accurate version
+    // custom workspace for cuIMMA
+    #ifdef MAGMA_HAVE_CUDA
+    magma_int_t magma_arch = magma_getdevice_arch();
+    if(magma_arch >= 800 && <= 900) {
+        gpu_arch_t arch = (magma_arch >= 800 && magma_arch < 900) ? gpu_arch_t::AMPERE : gpu_arch_t::HOPPER;
+        size_t cuimma_work_size_in_bytes;
+        magma_int_t largest_dim = 20480;
+        kernel_config_t config = get_kernel_config(arch);
+        cuimma_work_size_in_bytes = get_workspace_size(
+            operation_t::DGEMM, largest_dim, largest_dim, largest_dim,
+            queue->cuimma_nsplits__, config);
+
+        magma_malloc((void**)&queue->cuimma_work__, cuimma_work_size_in_bytes);
+        cublas_status = cublasSetWorkspace(queue->cublas_handle(), queue->cuimma_work__, cuimma_work_size_in_bytes);
+        if (cublas_status != CUBLAS_STATUS_SUCCESS) { printf("Error in setting cuBLAS custom workspace\n"); }
+    }
+    #endif
 
     MAGMA_UNUSED( stat );
     MAGMA_UNUSED( stat2 );
@@ -1272,6 +1360,8 @@ magma_queue_destroy_internal(
 {
     if ( queue != NULL ) {
     #if defined(MAGMA_HAVE_CUDA)
+
+        if (queue->cuimma_work__ != NULL) magma_free( queue->cuimma_work__ );
 
         if ( queue->cublas__ != NULL && (queue->own__ & own_cublas)) {
             cublasStatus_t stat = cublasDestroy( queue->cublas__ );

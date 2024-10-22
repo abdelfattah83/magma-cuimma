@@ -107,6 +107,7 @@ public:
     cusparseHandle_t cusparse_handle() { return cusparse__; }
 
     magma_int_t cuimma_nsplits__;
+    void* cuimma_work__;
 
     #endif
 
