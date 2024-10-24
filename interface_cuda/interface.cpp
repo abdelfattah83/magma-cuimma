@@ -1097,6 +1097,7 @@ magma_queue_create_internal(
 #endif
 
     queue->cuimma_nsplits__ = 18; // most accurate version
+    queue->cuimma_work__    = NULL;
 
     // custom workspace for cuIMMA
     #ifdef MAGMA_HAVE_CUDA
@@ -1222,7 +1223,9 @@ magma_queue_create_from_cuda_internal(
     stat2 = cusparseSetStream( queue->cusparse__, queue->stream__ );
     check_xerror( stat2, func, file, line );
 
-	queue->cuimma_nsplits__ = 18; // most accurate version
+    queue->cuimma_nsplits__ = 18; // most accurate version
+    queue->cuimma_work__    = NULL;
+
     // custom workspace for cuIMMA
     #ifdef MAGMA_HAVE_CUDA
     magma_int_t magma_arch = magma_getdevice_arch();
