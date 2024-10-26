@@ -351,7 +351,7 @@ int main( int argc, char** argv)
                 // We allow a slightly looser tolerance.
 
                 // use LAPACK for R_ref
-                #if 1
+                #if USE_MAX_REL_ERROR
                 dev_error = magma_zmax_relative_error( M, N, hC, ldc, hCdev, ldc );
                 #else
                 blasf77_zaxpy( &sizeC, &c_neg_one, hC, &ione, hCdev, &ione );
@@ -360,7 +360,7 @@ int main( int argc, char** argv)
                 #endif
 
                 #if defined(MAGMA_HAVE_CUDA) || defined(MAGMA_HAVE_HIP)
-                    #if 1
+                    #if USE_MAX_REL_ERROR
                     magma_error = magma_zmax_relative_error( M, N, hC, ldc, hCmagma, ldc );
                     #else
                     blasf77_zaxpy( &sizeC, &c_neg_one, hC, &ione, hCmagma, &ione );
@@ -392,7 +392,7 @@ int main( int argc, char** argv)
                 #if defined(MAGMA_HAVE_CUDA) || defined(MAGMA_HAVE_HIP)
 
                     // use cuBLAS for R_ref (currently only with CUDA)
-                    #if 1
+                    #if USE_MAX_REL_ERROR
                     magma_error = magma_zmax_relative_error( M, N, hCdev, ldc, hCmagma, ldc );
                     #else
                     blasf77_zaxpy( &sizeC, &c_neg_one, hCdev, &ione, hCmagma, &ione );
