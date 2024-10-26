@@ -24,6 +24,7 @@
 #define PRECISION_z
 
 #define COND_THRESHOLD (1)
+#define USE_MAX_REL_ERROR 1
 
 double magma_zmax_relative_error(
         magma_int_t m, magma_int_t n,
