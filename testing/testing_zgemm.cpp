@@ -351,24 +351,22 @@ int main( int argc, char** argv)
                 // We allow a slightly looser tolerance.
 
                 // use LAPACK for R_ref
-                if(opts.cond > COND_THRESHOLD) {
-                    dev_error = magma_zmax_relative_error( M, N, hC, ldc, hCdev, ldc );
-                }
-                else{
-                    blasf77_zaxpy( &sizeC, &c_neg_one, hC, &ione, hCdev, &ione );
-                    dev_error = lapackf77_zlange( "F", &M, &N, hCdev, &ldc, work )
+                #if 1
+                dev_error = magma_zmax_relative_error( M, N, hC, ldc, hCdev, ldc );
+                #else
+                blasf77_zaxpy( &sizeC, &c_neg_one, hC, &ione, hCdev, &ione );
+                dev_error = lapackf77_zlange( "F", &M, &N, hCdev, &ldc, work )
                                 / (sqrt(double(K+2))*fabs(alpha)*Anorm*Bnorm + 2*fabs(beta)*Cnorm);
-                }
+                #endif
 
                 #if defined(MAGMA_HAVE_CUDA) || defined(MAGMA_HAVE_HIP)
-                    if(opts.cond > COND_THRESHOLD) {
-                        magma_error = magma_zmax_relative_error( M, N, hC, ldc, hCmagma, ldc );
-                    }
-                    else {
-                        blasf77_zaxpy( &sizeC, &c_neg_one, hC, &ione, hCmagma, &ione );
-                        magma_error = lapackf77_zlange( "F", &M, &N, hCmagma, &ldc, work )
+                    #if 1
+                    magma_error = magma_zmax_relative_error( M, N, hC, ldc, hCmagma, ldc );
+                    #else
+                    blasf77_zaxpy( &sizeC, &c_neg_one, hC, &ione, hCmagma, &ione );
+                    magma_error = lapackf77_zlange( "F", &M, &N, hCmagma, &ldc, work )
                                 / (sqrt(double(K+2))*fabs(alpha)*Anorm*Bnorm + 2*fabs(beta)*Cnorm);
-                    }
+                    #endif
 
                     bool okay = (magma_error < tol && dev_error < tol);
                     status += ! okay;
@@ -394,14 +392,13 @@ int main( int argc, char** argv)
                 #if defined(MAGMA_HAVE_CUDA) || defined(MAGMA_HAVE_HIP)
 
                     // use cuBLAS for R_ref (currently only with CUDA)
-                    if(opts.cond > 1) {
-                        magma_error = magma_zmax_relative_error( M, N, hCdev, ldc, hCmagma, ldc );
-                    }
-                    else {
-                        blasf77_zaxpy( &sizeC, &c_neg_one, hCdev, &ione, hCmagma, &ione );
-                        magma_error = lapackf77_zlange( "F", &M, &N, hCmagma, &ldc, work )
+                    #if 1
+                    magma_error = magma_zmax_relative_error( M, N, hCdev, ldc, hCmagma, ldc );
+                    #else
+                    blasf77_zaxpy( &sizeC, &c_neg_one, hCdev, &ione, hCmagma, &ione );
+                    magma_error = lapackf77_zlange( "F", &M, &N, hCmagma, &ldc, work )
                                 / (sqrt(double(K+2))*fabs(alpha)*Anorm*Bnorm + 2*fabs(beta)*Cnorm);
-                    }
+                    #endif
 
                     bool okay = (magma_error < tol);
                     status += ! okay;
