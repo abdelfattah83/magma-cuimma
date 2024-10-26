@@ -23,6 +23,30 @@
 
 #define PRECISION_z
 
+#define COND_THRESHOLD (1)
+
+double magma_zmax_relative_error(
+        magma_int_t m, magma_int_t n,
+        magmaDoubleComplex* hCref, magma_int_t ldcref,
+        magmaDoubleComplex* hCres, magma_int_t ldcres )
+{
+#define hCref(i,j) hCref[(j)*ldcref + (i)]
+#define hCres(i,j) hCres[(j)*ldcres + (i)]
+
+    double error = 0.;
+    #pragma omp parallel for reduction(max:error)
+    for(magma_int_t s = 0; s < m*n; s++) {
+        magma_int_t i = s % m;
+        magma_int_t j = s / m;
+        error = max(error, MAGMA_Z_ABS(hCref(i,j) - hCres(i,j)) / MAGMA_Z_ABS(hCref(i,j)) );
+    }
+
+    return error;
+
+#undef hCref
+#undef hCres
+}
+
 /* ////////////////////////////////////////////////////////////////////////////
    -- Testing zgemm
 */
@@ -42,7 +66,7 @@ int main( int argc, char** argv)
     magma_print_environment();
 
     real_Double_t   gflops, magma_perf, magma_time, dev_perf, dev_time, cpu_perf, cpu_time;
-    double          magma_error, dev_error, work[1];
+    double          magma_error, dev_error, work[100000];
     magma_int_t M, N, K;
     magma_int_t Am, An, Bm, Bn;
     magma_int_t sizeA, sizeB, sizeC;
@@ -138,9 +162,21 @@ int main( int argc, char** argv)
 
             /* perform diagonal scaling */
             #ifdef PRECISION_d
-            if(opts.cond > 1) {
+            if(opts.cond > COND_THRESHOLD) {
                 bool notransA = (opts.transA == MagmaNoTrans) ? true : false;
                 bool notransB = (opts.transB == MagmaNoTrans) ? true : false;
+
+				// make A between [1,2]
+				#pragma omp parallel for
+				for(magma_int_t i = 0; i < sizeA; i++) {
+					hA[i] += 1.;
+				}
+
+				// make B between [1,2]
+				#pragma omp parallel for
+				for(magma_int_t i = 0; i < sizeB; i++) {
+					hB[i] += 1.;
+				}
 
                 double cond_sqrt = sqrt(opts.cond);
                 double* hD = NULL, *hVA = NULL, *hVB = NULL;
@@ -237,9 +273,9 @@ int main( int argc, char** argv)
             magma_zsetmatrix( Bm, Bn, hB, ldb, dB(0,0), lddb, opts.queue );
 
             // for error checks
-            double Anorm = lapackf77_zlange( "F", &Am, &An, hA, &lda, work );
-            double Bnorm = lapackf77_zlange( "F", &Bm, &Bn, hB, &ldb, work );
-            double Cnorm = lapackf77_zlange( "F", &M,  &N,  hC, &ldc, work );
+            double Anorm = lapackf77_zlange( "I", &Am, &An, hA, &lda, work );
+            double Bnorm = lapackf77_zlange( "I", &Bm, &Bn, hB, &ldb, work );
+            double Cnorm = lapackf77_zlange( "I", &M,  &N,  hC, &ldc, work );
 
             #ifdef MAGMA_HAVE_CUDA
             magma_queue_set_cuimma_nplits(opts.queue, opts.oz_nsplits);
@@ -315,14 +351,24 @@ int main( int argc, char** argv)
                 // We allow a slightly looser tolerance.
 
                 // use LAPACK for R_ref
-                blasf77_zaxpy( &sizeC, &c_neg_one, hC, &ione, hCdev, &ione );
-                dev_error = lapackf77_zlange( "F", &M, &N, hCdev, &ldc, work )
-                            / (sqrt(double(K+2))*fabs(alpha)*Anorm*Bnorm + 2*fabs(beta)*Cnorm);
+                if(opts.cond > COND_THRESHOLD) {
+                    dev_error = magma_zmax_relative_error( M, N, hC, ldc, hCdev, ldc );
+                }
+                else{
+                    blasf77_zaxpy( &sizeC, &c_neg_one, hC, &ione, hCdev, &ione );
+                    dev_error = lapackf77_zlange( "F", &M, &N, hCdev, &ldc, work )
+                                / (sqrt(double(K+2))*fabs(alpha)*Anorm*Bnorm + 2*fabs(beta)*Cnorm);
+                }
 
                 #if defined(MAGMA_HAVE_CUDA) || defined(MAGMA_HAVE_HIP)
-                    blasf77_zaxpy( &sizeC, &c_neg_one, hC, &ione, hCmagma, &ione );
-                    magma_error = lapackf77_zlange( "F", &M, &N, hCmagma, &ldc, work )
-                            / (sqrt(double(K+2))*fabs(alpha)*Anorm*Bnorm + 2*fabs(beta)*Cnorm);
+                    if(opts.cond > COND_THRESHOLD) {
+                        magma_error = magma_zmax_relative_error( M, N, hC, ldc, hCmagma, ldc );
+                    }
+                    else {
+                        blasf77_zaxpy( &sizeC, &c_neg_one, hC, &ione, hCmagma, &ione );
+                        magma_error = lapackf77_zlange( "F", &M, &N, hCmagma, &ldc, work )
+                                / (sqrt(double(K+2))*fabs(alpha)*Anorm*Bnorm + 2*fabs(beta)*Cnorm);
+                    }
 
                     bool okay = (magma_error < tol && dev_error < tol);
                     status += ! okay;
@@ -348,9 +394,14 @@ int main( int argc, char** argv)
                 #if defined(MAGMA_HAVE_CUDA) || defined(MAGMA_HAVE_HIP)
 
                     // use cuBLAS for R_ref (currently only with CUDA)
-                    blasf77_zaxpy( &sizeC, &c_neg_one, hCdev, &ione, hCmagma, &ione );
-                    magma_error = lapackf77_zlange( "F", &M, &N, hCmagma, &ldc, work )
-                            / (sqrt(double(K+2))*fabs(alpha)*Anorm*Bnorm + 2*fabs(beta)*Cnorm);
+                    if(opts.cond > 1) {
+                        magma_error = magma_zmax_relative_error( M, N, hCdev, ldc, hCmagma, ldc );
+                    }
+                    else {
+                        blasf77_zaxpy( &sizeC, &c_neg_one, hCdev, &ione, hCmagma, &ione );
+                        magma_error = lapackf77_zlange( "F", &M, &N, hCmagma, &ldc, work )
+                                / (sqrt(double(K+2))*fabs(alpha)*Anorm*Bnorm + 2*fabs(beta)*Cnorm);
+                    }
 
                     bool okay = (magma_error < tol);
                     status += ! okay;
