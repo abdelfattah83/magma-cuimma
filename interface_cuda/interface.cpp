@@ -1131,6 +1131,9 @@ magma_queue_set_cuimma_nplits(magma_queue_t queue, magma_int_t nsplits)
     if(nsplits >= 3 && nsplits <= 18) {
         queue->cuimma_nsplits__ = nsplits;
     }
+    else {
+        queue->cuimma_nsplits__ = 0;
+    }
 }
 
 extern "C" magma_int_t

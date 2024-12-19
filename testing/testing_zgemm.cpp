@@ -278,9 +278,6 @@ int main( int argc, char** argv)
             double Bnorm = lapackf77_zlange( "I", &Bm, &Bn, hB, &ldb, work );
             double Cnorm = lapackf77_zlange( "I", &M,  &N,  hC, &ldc, work );
 
-            #ifdef MAGMA_HAVE_CUDA
-            magma_queue_set_cuimma_nplits(opts.queue, opts.oz_nsplits);
-            #endif
             /* =====================================================================
                Performs operation using MAGMABLAS (currently only with CUDA)
                =================================================================== */
@@ -289,12 +286,13 @@ int main( int argc, char** argv)
 
                 magma_flush_cache( opts.cache );
                 magma_time = magma_sync_wtime( opts.queue );
+
                 #if defined(MAGMA_HAVE_CUDA) && defined(PRECISION_d)
-                magma_dgemm_cuimma( opts.transA, opts.transB, M, N, K,
-                             alpha, dA, ldda,
-                                    dB, lddb,
-                              beta,  dC, lddc,
-                              opts.queue );
+                magma_queue_set_cuimma_nplits(opts.queue, opts.oz_nsplits);
+                magma_zgemm( opts.transA, opts.transB, M, N, K,
+                         alpha, dA(0,0), ldda,
+                                dB(0,0), lddb,
+                         beta,  dC(0,0), lddc, opts.queue );
                 #else
                 magmablas_zgemm( opts.transA, opts.transB, M, N, K,
                                  alpha, dA, ldda,
@@ -302,6 +300,7 @@ int main( int argc, char** argv)
                                  beta,  dC, lddc,
                                  opts.queue );
                 #endif
+
                 magma_time = magma_sync_wtime( opts.queue ) - magma_time;
                 magma_perf = gflops / magma_time;
 
@@ -315,6 +314,7 @@ int main( int argc, char** argv)
 
             magma_flush_cache( opts.cache );
             dev_time = magma_sync_wtime( opts.queue );
+            magma_queue_set_cuimma_nplits(opts.queue, 0);
             magma_zgemm( opts.transA, opts.transB, M, N, K,
                          alpha, dA(0,0), ldda,
                                 dB(0,0), lddb,
