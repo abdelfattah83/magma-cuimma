@@ -4,9 +4,9 @@
        Univ. of California, Berkeley
        Univ. of Colorado, Denver
        @date
-    
+
        @author Raffaele Solca
-    
+
        @precisions normal z -> c
 
 */
@@ -137,7 +137,7 @@ magma_zstedx(
     double *rwork, magma_int_t lrwork,
     magma_int_t *iwork, magma_int_t liwork,
     magmaDouble_ptr dwork,
-    magma_int_t *info)
+    magma_int_t *info, magma_int_t oz_splits)
 {
     magma_int_t alleig, indeig, valeig, lquery;
     magma_int_t i, j, smlsiz;

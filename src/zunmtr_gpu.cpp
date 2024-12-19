@@ -118,12 +118,12 @@ magma_zunmtr_gpu(
     magmaDoubleComplex   *tau,
     magmaDoubleComplex_ptr dC,    magma_int_t lddc,
     const magmaDoubleComplex *wA, magma_int_t ldwa,
-    magma_int_t *info)
+    magma_int_t *info, magma_int_t oz_splits)
 {
     #define dA(i_,j_) (dA + (i_) + (j_)*ldda)
     #define dC(i_,j_) (dC + (i_) + (j_)*lddc)
     #define wA(i_,j_) (wA + (i_) + (j_)*ldwa)
-    
+
     magma_int_t i1, i2, mi, ni, nq;
     magma_int_t iinfo;
 
@@ -178,7 +178,7 @@ magma_zunmtr_gpu(
 
     if (upper) {
         magma_zunmql2_gpu(side, trans, mi, ni, nq-1, dA(0,1), ldda, tau,
-                          dC, lddc, wA(0,1), ldwa, &iinfo);
+                          dC, lddc, wA(0,1), ldwa, &iinfo, oz_splits);
     }
     else {
         /* Q was determined by a call to ZHETRD with UPLO = MagmaLower */
@@ -190,7 +190,7 @@ magma_zunmtr_gpu(
             i2 = 1;
         }
         magma_zunmqr2_gpu(side, trans, mi, ni, nq-1, dA(1,0), ldda, tau,
-                          dC(i1,i2), lddc, wA(1,0), ldwa, &iinfo);
+                          dC(i1,i2), lddc, wA(1,0), ldwa, &iinfo, oz_splits);
     }
 
     return *info;

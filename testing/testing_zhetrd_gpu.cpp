@@ -48,7 +48,7 @@ int main( int argc, char** argv)
     magma_int_t itwo     = 2;
     magma_int_t ithree   = 3;
     int status = 0;
-    
+
     #ifdef COMPLEX
     double *rwork;
     #endif
@@ -59,7 +59,7 @@ int main( int argc, char** argv)
     opts.parse_opts( argc, argv );
 
     double tol = opts.tolerance * lapackf77_dlamch("E");
-    
+
     printf("%% Available versions (specify with --version):\n");
     printf("%% 1 - magma_zhetrd_gpu:   uses ZHEMV from CUBLAS (default)\n");
     printf("%% 2 - magma_zhetrd2_gpu:  uses ZHEMV from MAGMA BLAS that requires extra space\n\n");
@@ -76,35 +76,35 @@ int main( int argc, char** argv)
             lwork  = N*nb;  /* We suppose the magma nb is bigger than lapack nb */
             gflops = FLOPS_ZHETRD( N ) / 1e9;
             ldwork = ldda*magma_ceildiv(N,64) + 2*ldda*nb;
-            
+
             TESTING_CHECK( magma_zmalloc_cpu( &h_A,     lda*N ));
             TESTING_CHECK( magma_zmalloc_cpu( &tau,     N     ));
             TESTING_CHECK( magma_dmalloc_cpu( &diag,    N   ));
             TESTING_CHECK( magma_dmalloc_cpu( &offdiag, N-1 ));
-            
+
             TESTING_CHECK( magma_zmalloc_pinned( &h_R,     lda*N ));
             TESTING_CHECK( magma_zmalloc_pinned( &h_work,  lwork ));
-            
+
             TESTING_CHECK( magma_zmalloc( &d_R,     ldda*N ));
             TESTING_CHECK( magma_zmalloc( &dwork,   ldwork ));
-            
+
             /* ====================================================================
                Initialize the matrix
                =================================================================== */
             magma_generate_matrix( opts, N, N, h_A, lda );
             magma_zsetmatrix( N, N, h_A, lda, d_R, ldda, opts.queue );
-            
+
             /* ====================================================================
                Performs operation using MAGMA
                =================================================================== */
             gpu_time = magma_wtime();
             if (opts.version == 1) {
                 magma_zhetrd_gpu( opts.uplo, N, d_R, ldda, diag, offdiag,
-                                  tau, h_R, lda, h_work, lwork, &info );
+                                  tau, h_R, lda, h_work, lwork, &info, opts.oz_nsplits);
             }
             else {
                 magma_zhetrd2_gpu( opts.uplo, N, d_R, ldda, diag, offdiag,
-                                   tau, h_R, lda, h_work, lwork, dwork, ldwork, &info );
+                                   tau, h_R, lda, h_work, lwork, dwork, ldwork, &info, opts.oz_nsplits);
             }
             gpu_time = magma_wtime() - gpu_time;
             gpu_perf = gflops / gpu_time;
@@ -112,7 +112,7 @@ int main( int argc, char** argv)
                 printf("magma_zhetrd_gpu returned error %lld: %s.\n",
                        (long long) info, magma_strerror( info ));
             }
-            
+
             /* =====================================================================
                Check the factorization
                =================================================================== */
@@ -122,11 +122,11 @@ int main( int argc, char** argv)
                 #ifdef COMPLEX
                 TESTING_CHECK( magma_dmalloc_cpu( &rwork, N ));
                 #endif
-                
+
                 magma_zgetmatrix( N, N, d_R, ldda, h_R, lda, opts.queue );
                 magma_zgetmatrix( N, N, d_R, ldda, h_Q, lda, opts.queue );
                 lapackf77_zungtr( lapack_uplo_const(opts.uplo), &N, h_Q, &lda, tau, h_work, &lwork, &info );
-                
+
                 lapackf77_zhet21( &itwo, lapack_uplo_const(opts.uplo), &N, &ione,
                                   h_A, &lda, diag, offdiag,
                                   h_Q, &lda, h_R, &lda,
@@ -135,7 +135,7 @@ int main( int argc, char** argv)
                                   rwork,
                                   #endif
                                   &result[0] );
-                
+
                 lapackf77_zhet21( &ithree, lapack_uplo_const(opts.uplo), &N, &ione,
                                   h_A, &lda, diag, offdiag,
                                   h_Q, &lda, h_R, &lda,
@@ -146,14 +146,14 @@ int main( int argc, char** argv)
                                   &result[1] );
                 result[0] *= eps;
                 result[1] *= eps;
-                
+
                 magma_free_cpu( h_Q  );
                 magma_free_cpu( work );
                 #ifdef COMPLEX
                 magma_free_cpu( rwork );
                 #endif
             }
-                        
+
             /* =====================================================================
                Performs operation using LAPACK
                =================================================================== */
@@ -168,7 +168,7 @@ int main( int argc, char** argv)
                            (long long) info, magma_strerror( info ));
                 }
             }
-            
+
             /* =====================================================================
                Print performance and error.
                =================================================================== */
@@ -186,18 +186,18 @@ int main( int argc, char** argv)
             } else {
                 printf("     ---             ---\n");
             }
-            
+
             magma_free_cpu( h_A     );
             magma_free_cpu( tau     );
             magma_free_cpu( diag    );
             magma_free_cpu( offdiag );
-            
+
             magma_free_pinned( h_R    );
             magma_free_pinned( h_work );
-            
+
             magma_free( d_R   );
             magma_free( dwork );
-            
+
             fflush( stdout );
         }
         if ( opts.niter > 1 ) {

@@ -436,7 +436,7 @@ magma_zheevdx_gpu(
 
         magma_zstedx( range, n, vl, vu, il, iu, w, &rwork[inde],
                       &work[indwrk], n, &rwork[indrwk],
-                      llrwk, iwork, liwork, dwork, info );
+                      llrwk, iwork, liwork, dwork, info, 0);
 
         timer_stop( time );
         timer_printf( "time zstedx = %6.2f\n", time );
@@ -447,7 +447,7 @@ magma_zheevdx_gpu(
         magma_zsetmatrix( n, *mout, &work[indwrk + n * (il-1) ], n, dC, lddc, queue );
 
         magma_zunmtr_gpu( MagmaLeft, uplo, MagmaNoTrans, n, *mout, dA, ldda, &work[indtau],
-                          dC, lddc, wA, ldwa, &iinfo );
+                          dC, lddc, wA, ldwa, &iinfo, 0);
 
         magma_zcopymatrix( n, *mout, dC, lddc, dA, ldda, queue );
 

@@ -25,7 +25,7 @@ extern "C" void  magma_zstedc_withZ(magma_vec_t JOBZ, magma_int_t N, double *D, 
     magma_int_t *IWORK;
     magma_int_t LWORK, LIWORK, LRWORK;
     magma_int_t INFO;
-    
+
     // use log() as log2() is not defined everywhere (e.g., Windows)
     const double log_2 = 0.6931471805599453;
     if (JOBZ == MagmaVec) {
@@ -42,22 +42,22 @@ extern "C" void  magma_zstedc_withZ(magma_vec_t JOBZ, magma_int_t N, double *D, 
         LIWORK = 256*N;
     } else {
         printf("ERROR JOBZ %c\n", JOBZ);
-        return MAGMA_ERR_ILLEGAL_VALUE; 
+        return MAGMA_ERR_ILLEGAL_VALUE;
     }
-    
+
     magma_dmalloc_cpu( &RWORK, LRWORK );
     magma_zmalloc_cpu( &WORK,  LWORK  );
     magma_imalloc_cpu( &IWORK, LIWORK );
-    
+
     lapackf77_zstedc( lapack_vec_const(JOBZ), &N, D, E, Z, &LDZ, WORK, &LWORK, RWORK, &LRWORK, IWORK, &LIWORK, &INFO);
-    
+
     if (INFO != 0) {
         printf("=================================================\n");
         printf("ZSTEDC ERROR OCCURED. HERE IS INFO %lld\n ", (long long) INFO );
         printf("=================================================\n");
         //assert(INFO == 0);
     }
-    
+
     magma_free_cpu( IWORK );
     magma_free_cpu( WORK  );
     magma_free_cpu( RWORK );
@@ -74,14 +74,14 @@ extern "C" void  magma_zstedx_withZ(magma_int_t N, magma_int_t NE, double *D, do
     magma_int_t *IWORK;
     magma_int_t LIWORK, LRWORK;
     magma_int_t INFO;
-    
+
     //LWORK  = N;
     LRWORK = 2*N*N + 4*N + 1 + 256*N;
     LIWORK = 256*N;
-    
+
     magma_dmalloc_cpu( &RWORK, LRWORK );
     magma_imalloc_cpu( &IWORK, LIWORK );
-    
+
     if (MAGMA_SUCCESS != magma_dmalloc( &dwork, 3*N*(N/2 + 1) )) {
         printf("=================================================\n");
         printf("ZSTEDC ERROR OCCURED IN CUDAMALLOC\n");
@@ -97,7 +97,7 @@ extern "C" void  magma_zstedx_withZ(magma_int_t N, magma_int_t NE, double *D, do
     if (NE == N)
         job = MagmaRangeAll;
 
-    magma_zstedx(job, N, 0., 0., 1, NE, D, E, Z, LDZ, RWORK, LRWORK, IWORK, LIWORK, dwork, &INFO);
+    magma_zstedx(job, N, 0., 0., 1, NE, D, E, Z, LDZ, RWORK, LRWORK, IWORK, LIWORK, dwork, &INFO, 0);
 
     if (INFO != 0) {
         printf("=================================================\n");

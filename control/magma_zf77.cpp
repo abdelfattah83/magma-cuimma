@@ -1719,7 +1719,7 @@ void magmaf_zhetrd_gpu(
         tau,
         wA, *ldwa,
         work, *lwork,
-        info );
+        info, 0);
 }
 
 #define magmaf_zhetrd2_gpu FORTRAN_NAME( magmaf_zhetrd2_gpu, MAGMAF_ZHETRD2_GPU )
@@ -1743,7 +1743,7 @@ void magmaf_zhetrd2_gpu(
         wA, *ldwa,
         work, *lwork,
         magma_zdevptr(dwork), *ldwork,
-        info );
+        info, 0);
 }
 
 #define magmaf_zhetrd_hb2st FORTRAN_NAME( magmaf_zhetrd_hb2st, MAGMAF_ZHETRD_HB2ST )
@@ -2171,7 +2171,7 @@ void magmaf_zstedx(
         rwork, *lrwork,
         iwork, *liwork,
         magma_ddevptr(dwork),
-        info );
+        info, 0);
 }
 
 #define magmaf_zstedx_m FORTRAN_NAME( magmaf_zstedx_m, MAGMAF_ZSTEDX_M )
@@ -2491,7 +2491,7 @@ void magmaf_zunmql2_gpu(
         tau,
         magma_zdevptr(dC), *lddc,
         wA, *ldwa,
-        info );
+        info, 0);
 }
 
 #define magmaf_zunmqr FORTRAN_NAME( magmaf_zunmqr, MAGMAF_ZUNMQR )
@@ -2547,7 +2547,7 @@ void magmaf_zunmqr2_gpu(
         tau,
         magma_zdevptr(dC), *lddc,
         wA, *ldwa,
-        info );
+        info, 0);
 }
 
 #define magmaf_zunmqr_m FORTRAN_NAME( magmaf_zunmqr_m, MAGMAF_ZUNMQR_M )
@@ -2601,7 +2601,7 @@ void magmaf_zunmtr_gpu(
         tau,
         magma_zdevptr(dC), *lddc,
         wA, *ldwa,
-        info );
+        info, 0);
 }
 
 #define magmaf_zunmtr_m FORTRAN_NAME( magmaf_zunmtr_m, MAGMAF_ZUNMTR_M )

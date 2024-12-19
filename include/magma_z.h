@@ -1075,7 +1075,7 @@ magma_zhetrd_gpu(
     double *d, double *e, magmaDoubleComplex *tau,
     magmaDoubleComplex *wA,  magma_int_t ldwa,
     magmaDoubleComplex *work, magma_int_t lwork,
-    magma_int_t *info);
+    magma_int_t *info, magma_int_t oz_splits);
 
 // CUDA MAGMA only
 magma_int_t
@@ -1086,7 +1086,7 @@ magma_zhetrd2_gpu(
     magmaDoubleComplex *wA,  magma_int_t ldwa,
     magmaDoubleComplex *work, magma_int_t lwork,
     magmaDoubleComplex_ptr dwork, magma_int_t ldwork,
-    magma_int_t *info);
+    magma_int_t *info, magma_int_t oz_splits);
 
 // TODO: rename magma_zhetrd_m?
 // CUDA MAGMA only
@@ -1627,7 +1627,7 @@ magma_zstedx(
     double *rwork, magma_int_t lrwork,
     magma_int_t *iwork, magma_int_t liwork,
     magmaDouble_ptr dwork,
-    magma_int_t *info);
+    magma_int_t *info, magma_int_t oz_splits);
 
 // CUDA MAGMA only
 magma_int_t
@@ -1810,7 +1810,7 @@ magma_zunmql2_gpu(
     magmaDoubleComplex *tau,
     magmaDoubleComplex_ptr dC, magma_int_t lddc,
     const magmaDoubleComplex *wA, magma_int_t ldwa,
-    magma_int_t *info);
+    magma_int_t *info, magma_int_t oz_splits);
 
 magma_int_t
 magma_zunmqr(
@@ -1842,7 +1842,7 @@ magma_zunmqr2_gpu(
     magmaDoubleComplex *tau,
     magmaDoubleComplex_ptr dC, magma_int_t lddc,
     const magmaDoubleComplex *wA, magma_int_t ldwa,
-    magma_int_t *info);
+    magma_int_t *info, magma_int_t oz_splits);
 
 // CUDA MAGMA only
 magma_int_t
@@ -1875,7 +1875,7 @@ magma_zunmtr_gpu(
     magmaDoubleComplex *tau,
     magmaDoubleComplex_ptr dC, magma_int_t lddc,
     const magmaDoubleComplex *wA, magma_int_t ldwa,
-    magma_int_t *info);
+    magma_int_t *info, magma_int_t oz_splits);
 
 // CUDA MAGMA only
 magma_int_t

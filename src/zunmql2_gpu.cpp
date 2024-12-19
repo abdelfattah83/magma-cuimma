@@ -117,17 +117,17 @@ magma_zunmql2_gpu(
     magmaDoubleComplex    *tau,
     magmaDoubleComplex_ptr dC, magma_int_t lddc,
     const magmaDoubleComplex *wA, magma_int_t ldwa,
-    magma_int_t *info)
+    magma_int_t *info, magma_int_t oz_splits)
 {
     #define dA(i_,j_) (dA + (i_) + (j_)*ldda)
     #define dC(i_,j_) (dC + (i_) + (j_)*lddc)
     #define wA(i_,j_) (wA + (i_) + (j_)*ldwa)
-    
+
     /* Constants */
     const magmaDoubleComplex c_zero = MAGMA_Z_ZERO;
     const magmaDoubleComplex c_one  = MAGMA_Z_ONE;
     const magma_int_t nbmax = 64;
-    
+
     /* Local variables */
     magmaDoubleComplex_ptr dwork = NULL, dT = NULL;
     magmaDoubleComplex T[ nbmax*nbmax ];
@@ -170,7 +170,7 @@ magma_zunmql2_gpu(
     } else if (ldwa < max(1,nq)) {
         *info = -12;
     }
-    
+
     if (*info != 0) {
         magma_xerbla( __func__, -(*info) );
         return *info;
@@ -185,7 +185,7 @@ magma_zunmql2_gpu(
     nb = nbmax;
 
     lddwork = nw;
-    
+
     /* Use hybrid CPU-GPU code */
     if ( (  left &&   notran) ||
          (! left && ! notran) )
@@ -198,44 +198,45 @@ magma_zunmql2_gpu(
         i2 = 1;
         step = -nb;
     }
-    
+
     // silence "uninitialized" warnings
     mi = 0;
     ni = 0;
-    
+
     if (left) {
         ni = n;
     } else {
         mi = m;
     }
-    
+
     // dwork is (n or m) x nb + nb x nb, for left or right respectively
     if (MAGMA_SUCCESS != magma_zmalloc( &dwork, lddwork*nb + nb*nb )) {
         *info = MAGMA_ERR_DEVICE_ALLOC;
         goto cleanup;
     }
     dT = dwork + lddwork*nb;
-    
+
     magma_device_t cdev;
     magma_getdevice( &cdev );
     magma_queue_create( cdev, &queue );
-    
+    magma_queue_set_cuimma_nplits(queue, oz_splits);
+
     // in bottom k x k portion of dA,
-    // set nb-1 sub-diagonals to 0, and diagonal to 1, in 
+    // set nb-1 sub-diagonals to 0, and diagonal to 1, in
     // This way we can copy V directly to the GPU,
     // with the lower triangle parts already set to identity.
     // A is nq x k, either m x k (left) or n x k (right)
     magmablas_zlaset_band( MagmaLower, k, k, nb, c_zero, c_one, dA(nq-k,0), ldda, queue );
-    
+
     for (i = i1; (step < 0 ? i >= i2 : i <= i2); i += step) {
         ib = min( nb, k - i + 1 );
-        
+
         /* Form the triangular factor of the block reflector
            H = H(i+ib-1) . . . H(i+1) H(i) */
         nq_i = nq - k + i + ib - 1;
         lapackf77_zlarft( "Backward", "Columnwise", &nq_i, &ib,
                           wA(1,i), &ldwa, &tau[i], T, &ib );
-        
+
         if (left) {
             /* H or H^H is applied to C(1:m-k+i+ib-1,1:n) */
             mi = m - k + i + ib - 1;
@@ -244,7 +245,7 @@ magma_zunmql2_gpu(
             /* H or H^H is applied to C(1:m,1:n-k+i+ib-1) */
             ni = n - k + i + ib - 1;
         }
-        
+
         /* Apply H or H^H; First copy T to the GPU */
         magma_zsetmatrix( ib, ib, T, ib, dT, ib, queue );
         magma_zlarfb_gpu( side, trans, MagmaBackward, MagmaColumnwise,

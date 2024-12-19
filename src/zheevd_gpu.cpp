@@ -255,7 +255,6 @@ magma_zheevd_gpu(
     magma_device_t cdev;
     magma_getdevice( &cdev );
     magma_queue_create( cdev, &queue );
-
     magma_queue_set_cuimma_nplits(queue, oz_splits);
 
     /* If matrix is very small, then just call LAPACK on CPU, no need for GPU */
@@ -338,11 +337,11 @@ magma_zheevd_gpu(
 #ifdef USE_MAGMABLAS_HEMV
     magma_zhetrd2_gpu( uplo, n, dA, ldda, w, &rwork[inde],
                        &work[indtau], wA, ldwa, &work[indwrk], llwork,
-                       dC, ldwork, &iinfo );
+                       dC, ldwork, &iinfo, oz_splits);
 #else
     magma_zhetrd_gpu(  uplo, n, dA, ldda, w, &rwork[inde],
                        &work[indtau], wA, ldwa, &work[indwrk], llwork,
-                       &iinfo );
+                       &iinfo, oz_splits);
 #endif
 
     timer_stop( time );
@@ -363,7 +362,7 @@ magma_zheevd_gpu(
 
         magma_zstedx( MagmaRangeAll, n, 0., 0., 0, 0, w, &rwork[inde],
                       &work[indwrk], n, &rwork[indrwk],
-                      llrwk, iwork, liwork, dwork, info );
+                      llrwk, iwork, liwork, dwork, info, oz_splits);
 
         timer_stop( time );
         timer_printf( "time zstedx = %6.2f\n", time );
@@ -372,7 +371,7 @@ magma_zheevd_gpu(
         magma_zsetmatrix( n, n, &work[indwrk], n, dC, lddc, queue );
 
         magma_zunmtr_gpu( MagmaLeft, uplo, MagmaNoTrans, n, n, dA, ldda, &work[indtau],
-                          dC, lddc, wA, ldwa, &iinfo );
+                          dC, lddc, wA, ldwa, &iinfo, oz_splits);
 
         magma_zcopymatrix( n, n, dC, lddc, dA, ldda, queue );
 

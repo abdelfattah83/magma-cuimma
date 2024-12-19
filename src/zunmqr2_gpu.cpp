@@ -118,17 +118,17 @@ magma_zunmqr2_gpu(
     magmaDoubleComplex    *tau,
     magmaDoubleComplex_ptr dC, magma_int_t lddc,
     const magmaDoubleComplex *wA, magma_int_t ldwa,
-    magma_int_t *info)
+    magma_int_t *info, magma_int_t oz_splits)
 {
     #define dA(i_,j_) (dA + (i_) + (j_)*ldda)
     #define dC(i_,j_) (dC + (i_) + (j_)*lddc)
     #define wA(i_,j_) (wA + (i_) + (j_)*ldwa)
-    
+
     /* Constants */
     const magmaDoubleComplex c_zero = MAGMA_Z_ZERO;
     const magmaDoubleComplex c_one  = MAGMA_Z_ONE;
     const magma_int_t nbmax = 64;
-    
+
     /* Local variables */
     magmaDoubleComplex_ptr dwork = NULL, dT = NULL;
     magmaDoubleComplex T[ nbmax*nbmax ];
@@ -182,7 +182,7 @@ magma_zunmqr2_gpu(
 
     // size of the block
     nb = nbmax;
-    
+
     lddwork = nw;
 
     /* Use hybrid CPU-GPU code */
@@ -197,11 +197,11 @@ magma_zunmqr2_gpu(
         i2 = 1;
         step = -nb;
     }
-    
+
     // silence "uninitialized" warnings
     mi = 0;
     ni = 0;
-    
+
     if (left) {
         ni = n;
         jc = 1;
@@ -209,7 +209,7 @@ magma_zunmqr2_gpu(
         mi = m;
         ic = 1;
     }
-    
+
     // dwork is (n or m) x nb + nb x nb, for left or right respectively
     if (MAGMA_SUCCESS != magma_zmalloc( &dwork, lddwork*nb + nb*nb )) {
         *info = MAGMA_ERR_DEVICE_ALLOC;
@@ -220,7 +220,8 @@ magma_zunmqr2_gpu(
     magma_device_t cdev;
     magma_getdevice( &cdev );
     magma_queue_create( cdev, &queue );
-    
+    magma_queue_set_cuimma_nplits(queue, oz_splits);
+
     // set nb-1 super-diagonals to 0, and diagonal to 1.
     // This way we can copy V directly to the GPU,
     // with the upper triangle parts already set to identity.

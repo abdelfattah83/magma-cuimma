@@ -271,7 +271,7 @@ magma_zheevdx(
         lrwmin = n;
         liwmin = 1;
     }
-    
+
     work[0]  = magma_zmake_lwork( lwmin );
     rwork[0] = magma_dmake_lwork( lrwmin );
     iwork[0] = liwmin;
@@ -406,7 +406,7 @@ magma_zheevdx(
 
         magma_zstedx(range, n, vl, vu, il, iu, w, &rwork[inde],
                      &work[indwrk], n, &rwork[indrwk],
-                     llrwk, iwork, liwork, dwork, info);
+                     llrwk, iwork, liwork, dwork, info, 0);
 
         magma_free( dwork );
 

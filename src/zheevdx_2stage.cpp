@@ -198,7 +198,7 @@ magma_zheevdx_2stage(
 {
     #define A( i_,j_) (A  + (i_) + (j_)*lda)
     #define A2(i_,j_) (A2 + (i_) + (j_)*lda2)
-    
+
     const char* uplo_  = lapack_uplo_const( uplo  );
     const char* jobz_  = lapack_vec_const( jobz  );
     const char* range_ = lapack_range_const( range );
@@ -238,8 +238,8 @@ magma_zheevdx_2stage(
     magma_int_t Vblksiz, ldv, ldt, blkcnt, sizTAU2, sizT2, sizV2, sizTAU1, ldz, lwstg1, lda2;
     magma_int_t parallel_threads = magma_get_parallel_numthreads();
     magma_int_t nb               = magma_get_zbulge_nb(n, parallel_threads);
-    magma_int_t lwstg2           = magma_zbulge_getlwstg2( n, parallel_threads, wantz, 
-                                                           &Vblksiz, &ldv, &ldt, &blkcnt, 
+    magma_int_t lwstg2           = magma_zbulge_getlwstg2( n, parallel_threads, wantz,
+                                                           &Vblksiz, &ldv, &ldt, &blkcnt,
                                                            &sizTAU2, &sizT2, &sizV2);
     // lwstg1=nb*n but since used also to store the band A2 so it is 2nb*n;
     lwstg1                       = magma_bulge_getlwstg1( n, nb, &lda2 );
@@ -349,7 +349,7 @@ magma_zheevdx_2stage(
     if ( ( ntiles < 2 ) || ( n <= 128 ) ) {
         #ifdef ENABLE_DEBUG
         printf("--------------------------------------------------------------\n");
-        printf("  warning matrix too small N=%lld NB=%lld, calling lapack on CPU\n", 
+        printf("  warning matrix too small N=%lld NB=%lld, calling lapack on CPU\n",
                (long long) n, (long long) nb );
         printf("--------------------------------------------------------------\n");
         #endif
@@ -414,7 +414,7 @@ magma_zheevdx_2stage(
     double *E                 = work;
     magma_int_t sizE_onwork   = n;
     #endif
-    
+
     magmaDoubleComplex *TAU1  = work + sizE_onwork;
     magmaDoubleComplex *TAU2  = TAU1 + sizTAU1;
     magmaDoubleComplex *V2    = TAU2 + sizTAU2;
@@ -425,7 +425,7 @@ magma_zheevdx_2stage(
     magmaDoubleComplex *A2    = Wstg1;
     magmaDoubleComplex *Z     = Wstg1;
     #ifdef COMPLEX
-    double *Wedc              = E + n; 
+    double *Wedc              = E + n;
     magma_int_t lwedc         = 1 + 4*n + 2*n*n; // lrwork - n; //used only for wantz>0
     #else
     double *Wedc              = Wstg1 + n*n;
@@ -489,7 +489,7 @@ magma_zheevdx_2stage(
     }
     else {
         timer_start( time_total );
-        
+
         double* dwedc;
         if (MAGMA_SUCCESS != magma_dmalloc( &dwedc, 3*n*(n/2 + 1) )) {
             // TODO free dT1, etc. --- see goto cleanup in dlaex0_m.cpp, etc.
@@ -501,7 +501,7 @@ magma_zheevdx_2stage(
 
         magma_zstedx(range, n, vl, vu, il, iu, W, E,
                      Z, ldz, Wedc, lwedc,
-                     iwork, liwork, dwedc, info);
+                     iwork, liwork, dwedc, info, 0);
 
 
         timer_stop( time );
@@ -552,17 +552,17 @@ magma_zheevdx_2stage(
         magma_queue_destroy( queue );
 
         timer_stop( time );
-        timer_printf( "  N= %10lld  nb= %5lld time zunmqr + copy = %6.2f\n", 
+        timer_printf( "  N= %10lld  nb= %5lld time zunmqr + copy = %6.2f\n",
                       (long long) n, (long long) nb, time );
         magma_free(dZ);
         magma_free(dA);
         timer_stop( time_total );
-        timer_printf( "  N= %10lld  nb= %5lld time eigenvectors backtransf. = %6.2f\n", 
+        timer_printf( "  N= %10lld  nb= %5lld time eigenvectors backtransf. = %6.2f\n",
                       (long long) n, (long long) nb, time_total );
     }
 
     magma_free(dT1);
-    
+
     /* If matrix was scaled, then rescale eigenvalues appropriately. */
     if (iscale == 1) {
         if (*info == 0) {
