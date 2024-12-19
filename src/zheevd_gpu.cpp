@@ -164,7 +164,8 @@ magma_zheevd_gpu(
     double *rwork, magma_int_t lrwork,
     #endif
     magma_int_t *iwork, magma_int_t liwork,
-    magma_int_t *info)
+    magma_int_t *info,
+    magma_int_t oz_splits)
 {
     const char* uplo_ = lapack_uplo_const( uplo );
     const char* jobz_ = lapack_vec_const( jobz );
@@ -254,6 +255,8 @@ magma_zheevd_gpu(
     magma_device_t cdev;
     magma_getdevice( &cdev );
     magma_queue_create( cdev, &queue );
+
+    magma_queue_set_cuimma_nplits(queue, oz_splits);
 
     /* If matrix is very small, then just call LAPACK on CPU, no need for GPU */
     if (n <= 128) {

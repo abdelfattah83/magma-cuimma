@@ -733,7 +733,8 @@ magma_zheevd_gpu(
     double *rwork, magma_int_t lrwork,
     #endif
     magma_int_t *iwork, magma_int_t liwork,
-    magma_int_t *info);
+    magma_int_t *info,
+    magma_int_t oz_splits);
 
 // CUDA MAGMA only
 magma_int_t

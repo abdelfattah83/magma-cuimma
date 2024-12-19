@@ -1165,7 +1165,7 @@ void magmaf_zheevd_gpu(
         work, *lwork,
         rwork, *lrwork,
         iwork, *liwork,
-        info );
+        info, 0);
 }
 
 #define magmaf_zheevd_m FORTRAN_NAME( magmaf_zheevd_m, MAGMAF_ZHEEVD_M )

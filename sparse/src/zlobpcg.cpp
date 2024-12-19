@@ -5,7 +5,7 @@
        Univ. of Colorado, Denver
 
        @date
-            
+
        @author Stan Tomov
        @author Hartwig Anzt
 
@@ -31,7 +31,7 @@
     X and B are complex vectors stored on the GPU memory.
 
     This is a GPU implementation of the LOBPCG method.
-    
+
     This method allocates all required memory space inside the routine.
     Also, the memory is not allocated as one big chunk, but seperatly for
     the different blocks. This allows to use texture also for large matrices.
@@ -49,7 +49,7 @@
     @param[in,out]
     precond_par magma_z_precond_par*
                 preconditioner parameters
-                
+
     @param[in]
     queue       magma_queue_t
                 Queue to execute in.
@@ -65,11 +65,11 @@ magma_zlobpcg(
     magma_queue_t queue )
 {
     magma_int_t info = 0;
-        
+
     #define  residualNorms(i,iter)  ( residualNorms + (i) + (iter)*n )
     #define SWAP(x, y)    { pointer = x; x = y; y = pointer; }
     #define hresidualNorms(i,iter)  (hresidualNorms + (i) + (iter)*n )
-    
+
     #define gramA(    m, n)   (gramA     + (m) + (n)*ldgram)
     #define gramB(    m, n)   (gramB     + (m) + (n)*ldgram)
     #define gevectors(m, n)   (gevectors + (m) + (n)*ldgram)
@@ -101,7 +101,7 @@ magma_zlobpcg(
     magmaDoubleComplex *blockP=NULL, *blockAP=NULL, *blockR=NULL, *blockAR=NULL, *blockAX=NULL, *blockW=NULL;
     magmaDoubleComplex *gramA=NULL, *gramB=NULL, *gramM=NULL;
     magmaDoubleComplex *gevectors=NULL, *h_gramB=NULL;
-    
+
     dwork = NULL;
     hwork = NULL;
     blockP = NULL;
@@ -118,18 +118,18 @@ magma_zlobpcg(
 
     magmaDoubleComplex *pointer, *origX = blockX;
     double *eval_gpu=NULL;
-    
+
     magma_int_t iterationNumber, cBlockSize, restart = 1, iter;
 
     //Chronometry
     real_Double_t tempo1, tempo2;
-    
+
     magma_int_t lwork = max( 2*n+n*magma_get_dsytrd_nb(n),
                                             1 + 6*3*n + 2* 3*n* 3*n);
-    
+
     magma_int_t *iwork={0}, liwork = 15*n+9;
     magma_int_t gramDim, ldgram  = 3*n, ikind = 3;
-    
+
     magmaDoubleComplex *hW={0};
 
     // === Set solver parameters ===
@@ -142,12 +142,12 @@ magma_zlobpcg(
     magmaDoubleComplex c_zero = MAGMA_Z_ZERO;
     magmaDoubleComplex c_one  = MAGMA_Z_ONE;
     magmaDoubleComplex c_neg_one = MAGMA_Z_NEG_ONE;
-    
+
     double *residualNorms={0}, *condestGhistory={0}, condestG={0};
     double *gevalues={0};
     magma_int_t *activeMask={0};
     double *hresidualNorms={0};
-    
+
 #ifdef COMPLEX
     double *rwork={0};
     magma_int_t lrwork = 1 + 5*(3*n) + 2*(3*n)*(3*n);
@@ -209,12 +209,12 @@ magma_zlobpcg(
     #if defined(PRECISION_s)
     ikind = 3;
     #endif
-    
+
     // === Make the initial vectors orthonormal ===
     magma_zgegqr_gpu(ikind, m, n, blockX, m, dwork, hwork, &info );
 
     //magma_zorthomgs( m, n, blockX, queue );
-    
+
     magma_z_bspmv_tuned(m, n, c_one, A, blockX, c_zero, blockAX, queue );
     solver_par->spmv_count++;
     // === Compute the Gram matrix = (X, AX) & its eigenstates ===
@@ -226,7 +226,7 @@ magma_zlobpcg(
                       #ifdef COMPLEX
                       rwork, lrwork,
                       #endif
-                      iwork, liwork, &info );
+                      iwork, liwork, &info, 0 );
 
     // === Update  X =  X * evectors ===
     magma_zgemm( MagmaNoTrans, MagmaNoTrans, m, n, n,
@@ -263,7 +263,7 @@ magma_zlobpcg(
             CHECK( magma_zcompact(m, n, blockR, m,
                            residualNorms(0, iterationNumber), residualTolerance,
                            activeMask, &cBlockSize, queue ));
-        
+
             if (cBlockSize == 0)
                 break;
 
@@ -271,14 +271,14 @@ magma_zlobpcg(
             // === for now set P to be identity (no preconditioner => nothing to be done )
             //magmablas_zlacpy( MagmaFull, m, cBlockSize, blockR, m, blockW, m, queue );
             //SWAP(blockW, blockR);
-            
+
             // preconditioner
             magma_z_matrix bWv={Magma_CSR}, bRv={Magma_CSR};
             bWv.memory_location = Magma_DEV;  bWv.num_rows = m; bWv.num_cols = cBlockSize; bWv.major = MagmaColMajor;  bWv.nnz = m*cBlockSize;  bWv.dval = blockW;
             bRv.memory_location = Magma_DEV;  bRv.num_rows = m; bRv.num_cols = cBlockSize; bRv.major = MagmaColMajor;  bRv.nnz = m*cBlockSize;  bRv.dval = blockR;
             CHECK( magma_z_applyprecond_left( MagmaNoTrans, A, bRv, &bWv, precond_par, queue ));
             CHECK( magma_z_applyprecond_right( MagmaNoTrans, A, bWv, &bRv, precond_par, queue ));
-        
+
             // === make the preconditioned residuals orthogonal to X
             if( precond_par->solver != Magma_NONE){
                 magma_zgemm( MagmaConjTrans, MagmaNoTrans, n, cBlockSize, m,
@@ -304,7 +304,7 @@ magma_zlobpcg(
                 // === compact P & AP as well
                 CHECK( magma_zcompactActive(m, n, blockP,  m, activeMask, queue ));
                 CHECK( magma_zcompactActive(m, n, blockAP, m, activeMask, queue ));
-          
+
                 /*
                 // === make P orthogonal to X ?
                 magma_zgemm( MagmaConjTrans, MagmaNoTrans, n, cBlockSize, m,
@@ -355,7 +355,7 @@ magma_zlobpcg(
 
             /* --- The Raileight-Ritz method for [X R P] -----------------------
                [ X R P ]'  [AX  AR  AP] y = evalues [ X R P ]' [ X R P ], i.e.,
-       
+
                       GramA                                 GramB
                 / X'AX  X'AR  X'AP \                 / X'X  X'R  X'P \
                |  R'AX  R'AR  R'AP  | y   = evalues |  R'X  R'R  R'P  |
@@ -440,10 +440,10 @@ magma_zlobpcg(
                              rwork, &lrwork,
                              #endif
                              iwork, &liwork, &info);
- 
+
             for(magma_int_t k =0; k<n; k++)
                 evalues[k] = gevalues[k];
-            
+
             // === copy back the result to gramA on the GPU and use it for the updates
             magma_zsetmatrix( gramDim, gramDim, gevectors, ldgram, gramA, ldgram, queue );
 
@@ -452,7 +452,7 @@ magma_zlobpcg(
                 magma_zgemm( MagmaNoTrans, MagmaNoTrans, m, n, cBlockSize,
                             c_one, blockP, m, gramA(n+cBlockSize,0), ldgram, c_zero, dwork, m, queue );
                 SWAP(dwork, blockP);
- 
+
                 // === contribution from R to the new X (in new search direction P)
                 magma_zgemm( MagmaNoTrans, MagmaNoTrans, m, n, cBlockSize,
                             c_one, blockR, m, gramA(n,0), ldgram, c_one, blockP, m, queue );
@@ -475,7 +475,7 @@ magma_zlobpcg(
                 magma_zgemm( MagmaNoTrans, MagmaNoTrans,m, n, cBlockSize,
                             c_one, blockAR, m, gramA(n,0), ldgram, c_zero, blockAP, m, queue );
             }
-            
+
             // === contribution from old X to the new X + the new search direction P
             magma_zgemm( MagmaNoTrans, MagmaNoTrans, m, n, n,
                         c_one, blockX, m, gramA, ldgram, c_zero, dwork, m, queue );
@@ -483,7 +483,7 @@ magma_zlobpcg(
             //magma_zaxpy( m*n, c_one, blockP, 1, blockX, 1, queue );
             CHECK( magma_zlobpcg_maxpy( m, n, blockP, blockX, queue ));
 
-            
+
             // === corresponding contribution from old AX to new AX + AP
             magma_zgemm( MagmaNoTrans, MagmaNoTrans, m, n, n,
                         c_one, blockAX, m, gramA, ldgram, c_zero, dwork, m, queue );
@@ -536,7 +536,7 @@ magma_zlobpcg(
         info = MAGMA_SLOW_CONVERGENCE;
     else
         info = MAGMA_DIVERGENCE;
-    
+
     // =============================================================================
     // === postprocessing;
     // =============================================================================
@@ -551,8 +551,8 @@ magma_zlobpcg(
                       #ifdef COMPLEX
                       rwork, lrwork,
                       #endif
-                      iwork, liwork, &info );
-   
+                      iwork, liwork, &info, 0);
+
     for(magma_int_t k =0; k<n; k++)
         evalues[k] = gevalues[k];
 
@@ -596,7 +596,7 @@ magma_zlobpcg(
 
     printf("Residuals are stored in file residualNorms\n");
     printf("Plot the residuals using: myplot \n");
-    
+
     FILE *residuals_file;
     residuals_file = fopen("residualNorms", "w");
     for(magma_int_t i =1; i<iterationNumber; i++) {
@@ -605,7 +605,7 @@ magma_zlobpcg(
         fprintf(residuals_file, "\n");
     }
     fclose(residuals_file);
-    
+
 cleanup:
     magma_free_cpu(hresidualNorms);
 
@@ -650,5 +650,5 @@ cleanup:
     rwork = NULL;
     #endif
 
-    return info; 
+    return info;
 }

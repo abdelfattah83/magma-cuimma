@@ -40,7 +40,7 @@ int main( int argc, char** argv)
     const double d_zero = 0;
     const magma_int_t izero = 0;
     const magma_int_t ione  = 1;
-    
+
     /* Local variables */
     real_Double_t   gpu_time, cpu_time;
     magmaDoubleComplex *h_A, *h_R, *h_Z, *h_work, aux_work[1], unused[1];
@@ -60,7 +60,7 @@ int main( int argc, char** argv)
 
     // checking NoVec requires LAPACK
     opts.lapack |= (opts.check && opts.jobz == MagmaNoVec);
-    
+
     double tol    = opts.tolerance * lapackf77_dlamch("E");
     double tolulp = opts.tolerance * lapackf77_dlamch("P");
 
@@ -99,7 +99,7 @@ int main( int argc, char** argv)
             lda  = N;
             ldda = magma_roundup( N, opts.align );  // multiple of 32 by default
             abstol = 0;  // auto, in zheevr
-            
+
             magma_range_t range;
             magma_int_t il, iu;
             double vl, vu;
@@ -115,7 +115,7 @@ int main( int argc, char** argv)
                                   aux_rwork, -1,
                                   #endif
                                   aux_iwork, -1,
-                                  &info );
+                                  &info, opts.oz_nsplits);
                 if( opts.version == 2 && opts.jobz == MagmaNoVec ) {
                     // For LAPACK test using zheevx.
                     #ifdef COMPLEX
@@ -167,7 +167,7 @@ int main( int argc, char** argv)
             lrwork = (magma_int_t) aux_rwork[0];
             #endif
             liwork = aux_iwork[0];
-            
+
             /* Allocate host memory for the matrix */
             TESTING_CHECK( magma_zmalloc_cpu( &h_A,    N*lda  ));
             TESTING_CHECK( magma_dmalloc_cpu( &w1,     N      ));
@@ -176,16 +176,16 @@ int main( int argc, char** argv)
             TESTING_CHECK( magma_dmalloc_cpu( &rwork,  lrwork ));
             #endif
             TESTING_CHECK( magma_imalloc_cpu( &iwork,  liwork ));
-            
+
             TESTING_CHECK( magma_zmalloc_pinned( &h_R,    N*lda  ));
             TESTING_CHECK( magma_zmalloc_pinned( &h_work, lwork  ));
-            
+
             TESTING_CHECK( magma_zmalloc( &d_R,    N*ldda ));
-           
+
             if (opts.version == 2) {
                 TESTING_CHECK( magma_zmalloc_cpu( &h_Z,    N*lda      ));
                 TESTING_CHECK( magma_imalloc_cpu( &ifail,  N          ));
-            } 
+            }
             if (opts.version == 3) {
                 TESTING_CHECK( magma_zmalloc( &d_Z,    N*ldda     ));
                 TESTING_CHECK( magma_zmalloc_cpu( &h_Z,    N*lda      ));
@@ -196,15 +196,15 @@ int main( int argc, char** argv)
                 TESTING_CHECK( magma_zmalloc_cpu( &h_Z,    N*lda      ));
                 TESTING_CHECK( magma_imalloc_cpu( &ifail,  N          ));
             }
-            
+
             /* Clear eigenvalues, for |S-S_magma| check when fraction < 1. */
             lapackf77_dlaset( "Full", &N, &ione, &d_zero, &d_zero, w1, &N );
             lapackf77_dlaset( "Full", &N, &ione, &d_zero, &d_zero, w2, &N );
-            
+
             /* Initialize the matrix */
             magma_generate_matrix( opts, N, N, h_A, lda );
             magma_zsetmatrix( N, N, h_A, lda, d_R, ldda, opts.queue );
-            
+
             /* ====================================================================
                Performs operation using MAGMA
                =================================================================== */
@@ -218,7 +218,7 @@ int main( int argc, char** argv)
                                   rwork, lrwork,
                                   #endif
                                   iwork, liwork,
-                                  &info );
+                                  &info, opts.oz_nsplits);
             }
             else if ( opts.version == 2 ) {  // version 2: zheevdx computes selected eigenvalues/vectors
                 magma_zheevdx_gpu( opts.jobz, range, opts.uplo,
@@ -278,7 +278,7 @@ int main( int argc, char** argv)
                 printf("magma_zheevd_gpu returned error %lld: %s.\n",
                        (long long) info, magma_strerror( info ));
             }
-            
+
             bool okay = true;
             if ( opts.check && opts.jobz != MagmaNoVec ) {
                 /* =====================================================================
@@ -290,10 +290,10 @@ int main( int argc, char** argv)
                    (3)    | S(with U) - S(w/o U) | / | S |    // currently disabled, but compares to LAPACK
                    =================================================================== */
                 magma_zgetmatrix( N, N, d_R, ldda, h_R, lda, opts.queue );
-                
+
                 magmaDoubleComplex *work;
                 TESTING_CHECK( magma_zmalloc_cpu( &work, 2*N*N ));
-                
+
                 // e is unused since kband=0; tau is unused since itype=1
                 if( Nfound == N ) {
                     lapackf77_zhet21( &ione, lapack_uplo_const(opts.uplo), &N, &izero,
@@ -320,9 +320,9 @@ int main( int argc, char** argv)
                 }
                 result[0] *= eps;
                 result[1] *= eps;
-                
+
                 magma_free_cpu( work );  work=NULL;
-                
+
                 // Disable third eigenvalue check that calls routine again --
                 // it obscures whether error occurs in first call above or in this call.
                 // But see comparison to LAPACK below.
@@ -336,7 +336,7 @@ int main( int argc, char** argv)
                 //                  rwork, lrwork,
                 //                  #endif
                 //                  iwork, liwork,
-                //                  &info);
+                //                  &info, oz_nsplits);
                 //if (info != 0) {
                 //    printf("magma_zheevd_gpu returned error %lld: %s.\n",
                 //           (long long) info, magma_strerror( info ));
@@ -350,7 +350,7 @@ int main( int argc, char** argv)
                 //}
                 //result[2] = diff / (N*maxw);
             }
-            
+
             /* =====================================================================
                Performs operation using LAPACK
                =================================================================== */
@@ -404,7 +404,7 @@ int main( int argc, char** argv)
                     printf("lapackf77_zheevd returned error %lld: %s.\n",
                            (long long) info, magma_strerror( info ));
                 }
-                
+
                 // compare eigenvalues
                 double maxw=0, diff=0;
                 for( int j=0; j < Nfound; j++ ) {
@@ -413,7 +413,7 @@ int main( int argc, char** argv)
                     diff = max(diff, fabs(w1[j] - w2[j]));
                 }
                 result[3] = diff / (N*maxw);
-                
+
                 okay = okay && (result[3] < tolulp);
                 printf("%5lld   %9.4f        %9.4f         %8.2e  ",
                        (long long) N, cpu_time, gpu_time, result[3] );
@@ -422,7 +422,7 @@ int main( int argc, char** argv)
                 printf("%5lld      ---           %9.4f           ---     ",
                        (long long) N, gpu_time);
             }
-            
+
             // print error checks
             if ( opts.check && opts.jobz != MagmaNoVec ) {
                 okay = okay && (result[0] < tol) && (result[1] < tol);
@@ -441,12 +441,12 @@ int main( int argc, char** argv)
             magma_free_cpu( rwork  );
             #endif
             magma_free_cpu( iwork  );
-            
+
             magma_free_pinned( h_R    );
             magma_free_pinned( h_work );
-            
+
             magma_free( d_R );
-            
+
             if ( opts.version == 2 ) {
                 magma_free_cpu( h_Z    );
                 magma_free_cpu( ifail  );
@@ -467,7 +467,7 @@ int main( int argc, char** argv)
             printf( "\n" );
         }
     }
-    
+
     opts.cleanup();
     TESTING_CHECK( magma_finalize() );
     return status;

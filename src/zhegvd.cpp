@@ -336,13 +336,13 @@ magma_zhegvd(
 
     timer_start( time );
     magma_zheevd_gpu( jobz, uplo, n, dA, ldda, w, A, lda,
-                      work, lwork, rwork, lrwork, iwork, liwork, info );
+                      work, lwork, rwork, lrwork, iwork, liwork, info, 0 );
     timer_stop( time );
     timer_printf( "time zheevd_gpu = %6.2f\n", time );
 
     if (wantz && *info == 0) {
         timer_start( time );
-        
+
         /* allocate and copy dB back */
         if (dB == NULL) {
             if (MAGMA_SUCCESS != magma_zmalloc( &dB, n*lddb ) ) {
@@ -377,7 +377,7 @@ magma_zhegvd(
         }
 
         magma_zgetmatrix( n, n, dA, ldda, A, lda, queue );
-        
+
         timer_stop( time );
         timer_printf( "time ztrsm/mm + getmatrix = %6.2f\n", time );
     }
