@@ -1096,7 +1096,7 @@ magma_queue_create_internal(
 
 #endif
 
-    queue->cuimma_nsplits__ = 18; // most accurate version
+    queue->cuimma_nsplits__ = 0;   // default to std. DGEMM
     queue->cuimma_work__    = NULL;
 
     // custom workspace for cuIMMA
@@ -1226,7 +1226,7 @@ magma_queue_create_from_cuda_internal(
     stat2 = cusparseSetStream( queue->cusparse__, queue->stream__ );
     check_xerror( stat2, func, file, line );
 
-    queue->cuimma_nsplits__ = 18; // most accurate version
+    queue->cuimma_nsplits__ = 0; // default to std. DGEMM
     queue->cuimma_work__    = NULL;
 
     // custom workspace for cuIMMA
