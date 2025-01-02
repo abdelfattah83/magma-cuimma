@@ -17,7 +17,7 @@
 #include "magma_timer.h"
 
 #define REAL
-#define FAST_SYMV
+//#define FAST_SYMV
 
 /***************************************************************************//**
     Purpose
@@ -147,7 +147,8 @@ magma_dsyevd_gpu(
     double *rwork, magma_int_t lrwork,
     #endif
     magma_int_t *iwork, magma_int_t liwork,
-    magma_int_t *info)
+    magma_int_t *info,
+    magma_int_t oz_splits )
 {
     magma_int_t ione = 1;
 
@@ -202,7 +203,7 @@ magma_dsyevd_gpu(
         lwmin  = 2*n + n*nb;
         liwmin = 1;
     }
-    
+
     work[0]  = magma_dmake_lwork( lwmin );
     iwork[0] = liwmin;
 
@@ -224,6 +225,7 @@ magma_dsyevd_gpu(
     magma_device_t cdev;
     magma_getdevice( &cdev );
     magma_queue_create( cdev, &queue );
+    magma_queue_set_cuimma_nplits(queue, oz_splits);
 
     /* If matrix is very small, then just call LAPACK on CPU, no need for GPU */
     if (n <= 128) {
@@ -294,11 +296,11 @@ magma_dsyevd_gpu(
 #ifdef FAST_SYMV
     magma_dsytrd2_gpu( uplo, n, dA, ldda, w, &work[inde],
                        &work[indtau], wA, ldwa, &work[indwrk], llwork,
-                       dwork, ldwork, &iinfo );
+                       dwork, ldwork, &iinfo, oz_splits);
 #else
     magma_dsytrd_gpu(  uplo, n, dA, ldda, w, &work[inde],
                        &work[indtau], wA, ldwa, &work[indwrk], llwork,
-                       &iinfo );
+                       &iinfo, oz_splits);
 #endif
 
     timer_stop( time );
@@ -323,7 +325,7 @@ magma_dsyevd_gpu(
 
         magma_dstedx( MagmaRangeAll, n, 0., 0., 0, 0, w, &work[inde],
                       &work[indwrk], n, &work[indwk2],
-                      llwrk2, iwork, liwork, dwork, info );
+                      llwrk2, iwork, liwork, dwork, info, oz_splits);
 
         timer_stop( time );
         timer_printf( "time dstedx = %6.2f\n", time );

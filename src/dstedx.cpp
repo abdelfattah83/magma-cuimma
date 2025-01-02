@@ -4,9 +4,9 @@
        Univ. of California, Berkeley
        Univ. of Colorado, Denver
        @date
-       
+
        @author Raffaele Solca
-       
+
        @precisions normal d -> s
 */
 #include "magma_internal.h"
@@ -135,7 +135,7 @@ magma_dstedx(
     double *work, magma_int_t lwork,
     magma_int_t *iwork, magma_int_t liwork,
     magmaDouble_ptr dwork,
-    magma_int_t *info)
+    magma_int_t *info, magma_int_t oz_splits)
 {
 #define Z(i_,j_) (Z + (i_) + (j_)*ldz)
 

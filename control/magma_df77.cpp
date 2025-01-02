@@ -2005,7 +2005,7 @@ void magmaf_dstedx(
         rwork, *lrwork,
         iwork, *liwork,
         magma_ddevptr(dwork),
-        info );
+        info, 0);
 }
 
 #define magmaf_dstedx_m FORTRAN_NAME( magmaf_dstedx_m, MAGMAF_DSTEDX_M )

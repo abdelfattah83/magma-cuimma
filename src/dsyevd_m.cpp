@@ -197,7 +197,7 @@ magma_dsyevd_m(
         lwmin  = 2*n + n*nb;
         liwmin = 1;
     }
-    
+
     work[0]  = magma_dmake_lwork( lwmin );
     iwork[0] = liwmin;
 
@@ -304,7 +304,7 @@ magma_dsyevd_m(
 
         magma_dstedx(MagmaRangeAll, n, 0., 0., 0, 0, w, &work[inde],
                      &work[indwrk], n, &work[indwk2],
-                     llwrk2, iwork, liwork, dwork, info);
+                     llwrk2, iwork, liwork, dwork, info, 0);
 
         magma_free( dwork );
 #else

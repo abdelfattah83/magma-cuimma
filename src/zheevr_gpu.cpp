@@ -448,10 +448,10 @@ magma_zheevr_gpu(
 
 #ifdef USE_MAGMABLAS_HEMV
     magma_zhetrd2_gpu(uplo, n, dA, ldda, &rwork[indrd], &rwork[indre],
-                      &work[indtau], wA, ldwa, &work[indwk], llwork, dZ, lddz*n, &iinfo);
+                      &work[indtau], wA, ldwa, &work[indwk], llwork, dZ, lddz*n, &iinfo, 0);
 #else
     magma_zhetrd_gpu (uplo, n, dA, ldda, &rwork[indrd], &rwork[indre],
-                      &work[indtau], wA, ldwa, &work[indwk], llwork, &iinfo);
+                      &work[indtau], wA, ldwa, &work[indwk], llwork, &iinfo, 0);
 #endif
 
     lopt = n + (magma_int_t)MAGMA_Z_REAL(work[indwk]);

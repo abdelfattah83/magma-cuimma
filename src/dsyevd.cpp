@@ -194,7 +194,7 @@ magma_dsyevd(
         lwmin  = 2*n + n*nb;
         liwmin = 1;
     }
-    
+
     work[0]  = magma_dmake_lwork( lwmin );
     iwork[0] = liwmin;
 
@@ -224,7 +224,7 @@ magma_dsyevd(
         }
         return *info;
     }
-    
+
     /* If matrix is very small, then just call LAPACK on CPU, no need for GPU */
     if (n <= 128) {
         lapackf77_dsyevd( jobz_, uplo_,
@@ -296,7 +296,7 @@ magma_dsyevd(
         // TTT Possible bug for n < 128
         magma_dstedx( MagmaRangeAll, n, 0., 0., 0, 0, w, &work[inde],
                       &work[indwrk], n, &work[indwk2], llwrk2,
-                      iwork, liwork, dwork, info );
+                      iwork, liwork, dwork, info, 0);
 
         magma_free( dwork );
 

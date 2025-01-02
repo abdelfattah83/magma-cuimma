@@ -410,11 +410,11 @@ magma_zheevdx_gpu(
 #ifdef USE_MAGMABLAS_HEMV
     magma_zhetrd2_gpu( uplo, n, dA, ldda, w, &rwork[inde],
                        &work[indtau], wA, ldwa, &work[indwrk], llwork,
-                       dC, ldwork, &iinfo );
+                       dC, ldwork, &iinfo, 0);
 #else
     magma_zhetrd_gpu ( uplo, n, dA, ldda, w, &rwork[inde],
                        &work[indtau], wA, ldwa, &work[indwrk], llwork,
-                       &iinfo );
+                       &iinfo, 0);
 #endif
 
     timer_stop( time );

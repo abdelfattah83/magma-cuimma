@@ -215,7 +215,7 @@ magma_zstedx(
     } else {
         // We simply call DSTEDX instead.
         magma_dstedx(range, n, vl, vu, il, iu, d, e, rwork, n,
-                     rwork+n*n, lrwork-n*n, iwork, liwork, dwork, info);
+                     rwork+n*n, lrwork-n*n, iwork, liwork, dwork, info, oz_splits);
 
         for (j=0; j < n; ++j)
             for (i=0; i < n; ++i) {

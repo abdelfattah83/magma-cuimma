@@ -1351,6 +1351,7 @@ magma_zgemm(
 	}
 
 	if( nsplits == 0 ) {
+	    printf("splits = %d, std. dgemm\n", nsplits);
         cublasDgemm(
             queue->cublas_handle(),
             cublas_trans_const( transA ),
@@ -1361,6 +1362,7 @@ magma_zgemm(
             (double*)&beta,  (double*)dC, int(lddc) );
 	}
 	else {
+	    printf("splits = %d, std. dgemm\n", nsplits);
 	    magma_queue_set_cuimma_nplits(queue, nsplits);
         magma_dgemm_cuimma(transA, transB, m, n, k, alpha, dA, ldda, dB, lddb, beta, dC, lddc, queue);
     }

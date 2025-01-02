@@ -24,7 +24,7 @@ extern "C" void  magma_dstedc_withZ(magma_vec_t JOBZ, magma_int_t N, double *D, 
     magma_int_t *IWORK;
     magma_int_t LWORK, LIWORK;
     magma_int_t INFO;
-    
+
     // use log() as log2() is not defined everywhere (e.g., Windows)
     const double log_2 = 0.6931471805599453;
     if (JOBZ == MagmaVec) {
@@ -38,21 +38,21 @@ extern "C" void  magma_dstedc_withZ(magma_vec_t JOBZ, magma_int_t N, double *D, 
         LIWORK = 256*N;
     } else {
         printf("ERROR JOBZ %c\n", JOBZ);
-        return MAGMA_ERR_ILLEGAL_VALUE; 
+        return MAGMA_ERR_ILLEGAL_VALUE;
     }
-    
+
     magma_dmalloc_cpu( &WORK,  LWORK  );
     magma_imalloc_cpu( &IWORK, LIWORK );
-    
+
     lapackf77_dstedc( lapack_vec_const(JOBZ), &N, D, E, Z, &LDZ, WORK, &LWORK, IWORK, &LIWORK, &INFO);
-    
+
     if (INFO != 0) {
         printf("=================================================\n");
         printf("DSTEDC ERROR OCCURED. HERE IS INFO %lld\n ", (long long) INFO );
         printf("=================================================\n");
         //assert(INFO == 0);
     }
-    
+
     magma_free_cpu( IWORK );
     magma_free_cpu( WORK  );
 }
@@ -68,13 +68,13 @@ extern "C" void  magma_dstedx_withZ(magma_int_t N, magma_int_t NE, double *D, do
     magma_int_t *IWORK;
     magma_int_t LWORK, LIWORK;
     magma_int_t INFO;
-    
+
     LWORK  = N*N+4*N+1;
     LIWORK = 3 + 5*N;
-    
+
     magma_dmalloc_cpu( &WORK,  LWORK  );
     magma_imalloc_cpu( &IWORK, LIWORK );
-    
+
     if (MAGMA_SUCCESS != magma_dmalloc( &dwork, 3*N*(N/2 + 1) )) {
         printf("=================================================\n");
         printf("DSTEDC ERROR OCCURED IN CUDAMALLOC\n");
@@ -89,9 +89,9 @@ extern "C" void  magma_dstedx_withZ(magma_int_t N, magma_int_t NE, double *D, do
     //magma_range_t job = MagmaRangeI;
     //if (NE == N)
     //    job = MagmaRangeAll;
-    
-    magma_dstedx(MagmaRangeI, N, 0., 0., 1, NE, D, E, Z, LDZ, WORK, LWORK, IWORK, LIWORK, dwork, &INFO);
-    
+
+    magma_dstedx(MagmaRangeI, N, 0., 0., 1, NE, D, E, Z, LDZ, WORK, LWORK, IWORK, LIWORK, dwork, &INFO, 0);
+
     if (INFO != 0) {
         printf("=================================================\n");
         printf("DSTEDC ERROR OCCURED. HERE IS INFO %lld\n ", (long long) INFO );

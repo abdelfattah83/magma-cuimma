@@ -1102,6 +1102,7 @@ magma_queue_create_internal(
     // custom workspace for cuIMMA
     #ifdef MAGMA_HAVE_CUDA
     magma_int_t magma_arch = magma_getdevice_arch();
+    magma_int_t workspace_splits = 18; // for now assume max. #splits for workspace allocation
     if(magma_arch >= 800 && magma_arch <= 900) {
         gpu_arch_t arch = (magma_arch >= 800 && magma_arch < 900) ? gpu_arch_t::AMPERE : gpu_arch_t::HOPPER;
         size_t cuimma_work_size_in_bytes;
@@ -1109,9 +1110,9 @@ magma_queue_create_internal(
         kernel_config_t config = get_kernel_config(arch);
         cuimma_work_size_in_bytes = get_workspace_size(
             operation_t::DGEMM, largest_dim, largest_dim, largest_dim,
-            queue->cuimma_nsplits__, config);
+            workspace_splits, config);
 
-        printf("cuIMMA workspace size = %.2f GB\n", (double)cuimma_work_size_in_bytes / (double)1e9);
+        //printf("cuIMMA workspace size = %.2f GB\n", (double)cuimma_work_size_in_bytes / (double)1e9);
         magma_malloc((void**)&queue->cuimma_work__, cuimma_work_size_in_bytes);
         if(queue->cuimma_work__ == NULL) printf("Error in allocation\n");
         cublasStatus_t cublas_status = cublasSetWorkspace(queue->cublas_handle(), queue->cuimma_work__, cuimma_work_size_in_bytes);
@@ -1232,6 +1233,7 @@ magma_queue_create_from_cuda_internal(
     // custom workspace for cuIMMA
     #ifdef MAGMA_HAVE_CUDA
     magma_int_t magma_arch = magma_getdevice_arch();
+    magma_int_t workspace_splits = 18; // for now assume max. #splits for workspace allocation
     if(magma_arch >= 800 && magma_arch <= 900) {
         gpu_arch_t arch = (magma_arch >= 800 && magma_arch < 900) ? gpu_arch_t::AMPERE : gpu_arch_t::HOPPER;
         size_t cuimma_work_size_in_bytes;
@@ -1239,7 +1241,7 @@ magma_queue_create_from_cuda_internal(
         kernel_config_t config = get_kernel_config(arch);
         cuimma_work_size_in_bytes = get_workspace_size(
             operation_t::DGEMM, largest_dim, largest_dim, largest_dim,
-            queue->cuimma_nsplits__, config);
+            workspace_splits, config);
 
         magma_malloc((void**)&queue->cuimma_work__, cuimma_work_size_in_bytes);
         cublasStatus_t cublas_status = cublasSetWorkspace(queue->cublas_handle(), queue->cuimma_work__, cuimma_work_size_in_bytes);

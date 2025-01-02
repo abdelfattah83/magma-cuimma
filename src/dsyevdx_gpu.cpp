@@ -257,7 +257,7 @@ magma_dsyevdx_gpu(
         lwmin  = 2*n + n*nb;
         liwmin = 1;
     }
-    
+
     work[0]  = magma_dmake_lwork( lwmin );
     iwork[0] = liwmin;
 
@@ -377,7 +377,7 @@ magma_dsyevdx_gpu(
 
         magma_dstedx( range, n, vl, vu, il, iu, w, &work[inde],
                       &work[indwrk], n, &work[indwk2],
-                      llwrk2, iwork, liwork, dwork, info );
+                      llwrk2, iwork, liwork, dwork, info, 0);
 
         timer_stop( time );
         timer_printf( "time dstedx = %6.2f\n", time );
