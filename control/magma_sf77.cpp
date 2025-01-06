@@ -1225,7 +1225,7 @@ void magmaf_ssyevd_gpu(
         wA, *ldwa,
         work, *lwork,
         iwork, *liwork,
-        info );
+        info, 0);
 }
 
 #define magmaf_ssyevd_m FORTRAN_NAME( magmaf_ssyevd_m, MAGMAF_SSYEVD_M )
@@ -1587,7 +1587,7 @@ void magmaf_ssytrd_gpu(
         tau,
         wA, *ldwa,
         work, *lwork,
-        info );
+        info, 0);
 }
 
 #define magmaf_ssytrd2_gpu FORTRAN_NAME( magmaf_ssytrd2_gpu, MAGMAF_SSYTRD2_GPU )
@@ -1611,7 +1611,7 @@ void magmaf_ssytrd2_gpu(
         wA, *ldwa,
         work, *lwork,
         magma_sdevptr(dwork), *ldwork,
-        info );
+        info, 0);
 }
 
 #define magmaf_ssytrd_sb2st FORTRAN_NAME( magmaf_ssytrd_sb2st, MAGMAF_SSYTRD_SB2ST )
@@ -2005,7 +2005,7 @@ void magmaf_sstedx(
         rwork, *lrwork,
         iwork, *liwork,
         magma_sdevptr(dwork),
-        info );
+        info, 0);
 }
 
 #define magmaf_sstedx_m FORTRAN_NAME( magmaf_sstedx_m, MAGMAF_SSTEDX_M )
@@ -2321,7 +2321,7 @@ void magmaf_sormql2_gpu(
         tau,
         magma_sdevptr(dC), *lddc,
         wA, *ldwa,
-        info );
+        info, 0);
 }
 
 #define magmaf_sormqr FORTRAN_NAME( magmaf_sormqr, MAGMAF_SORMQR )
@@ -2377,7 +2377,7 @@ void magmaf_sormqr2_gpu(
         tau,
         magma_sdevptr(dC), *lddc,
         wA, *ldwa,
-        info );
+        info, 0);
 }
 
 #define magmaf_sormqr_m FORTRAN_NAME( magmaf_sormqr_m, MAGMAF_SORMQR_M )
@@ -2431,7 +2431,7 @@ void magmaf_sormtr_gpu(
         tau,
         magma_sdevptr(dC), *lddc,
         wA, *ldwa,
-        info );
+        info, 0);
 }
 
 #define magmaf_sormtr_m FORTRAN_NAME( magmaf_sormtr_m, MAGMAF_SORMTR_M )

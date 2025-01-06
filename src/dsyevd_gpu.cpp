@@ -334,7 +334,7 @@ magma_dsyevd_gpu(
         magma_dsetmatrix( n, n, &work[indwrk], n, dwork, lddc, queue );
 
         magma_dormtr_gpu( MagmaLeft, uplo, MagmaNoTrans, n, n, dA, ldda, &work[indtau],
-                          dwork, lddc, wA, ldwa, &iinfo );
+                          dwork, lddc, wA, ldwa, &iinfo, oz_splits);
 
         magma_dcopymatrix( n, n, dwork, lddc, dA, ldda, queue );
 

@@ -351,11 +351,11 @@ magma_dsyevdx_gpu(
 #ifdef FAST_SYMV
     magma_dsytrd2_gpu( uplo, n, dA, ldda, w, &work[inde],
                        &work[indtau], wA, ldwa, &work[indwrk], llwork,
-                       dwork, ldwork, &iinfo );
+                       dwork, ldwork, &iinfo, 0);
 #else
     magma_dsytrd_gpu(  uplo, n, dA, ldda, w, &work[inde],
                        &work[indtau], wA, ldwa, &work[indwrk], llwork,
-                       &iinfo );
+                       &iinfo, 0);
 #endif
 
     timer_stop( time );
@@ -388,7 +388,7 @@ magma_dsyevdx_gpu(
         magma_dsetmatrix( n, *mout, &work[indwrk + n* (il-1) ], n, dwork, lddc, queue );
 
         magma_dormtr_gpu( MagmaLeft, uplo, MagmaNoTrans, n, *mout, dA, ldda, &work[indtau],
-                          dwork, lddc, wA, ldwa, &iinfo );
+                          dwork, lddc, wA, ldwa, &iinfo, 0);
 
         magma_dcopymatrix( n, *mout, dwork, lddc, dA, ldda, queue );
 

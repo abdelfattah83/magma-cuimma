@@ -223,7 +223,7 @@ magma_dsygvd(
         lwmin  = 2*n + n*nb;
         liwmin = 1;
     }
-    
+
     work[0]  = magma_dmake_lwork( lwmin );
     iwork[0] = liwmin;
 
@@ -245,7 +245,7 @@ magma_dsygvd(
     if (n == 0) {
         return *info;
     }
-    
+
     /* If matrix is very small, then just call LAPACK on CPU, no need for GPU */
     if (n <= 128) {
         lapackf77_dsygvd( &itype, jobz_, uplo_,
@@ -306,13 +306,13 @@ magma_dsygvd(
 
     timer_start( time );
     magma_dsyevd_gpu( jobz, uplo, n, dA, ldda, w, A, lda,
-                      work, lwork, iwork, liwork, info );
+                      work, lwork, iwork, liwork, info, 0);
     timer_stop( time );
     timer_printf( "time dsyevd_gpu = %6.2f\n", time );
 
     if (wantz && *info == 0) {
         timer_start( time );
-        
+
         /* allocate and copy dB back */
         if (dB == NULL) {
             if (MAGMA_SUCCESS != magma_dmalloc( &dB, n*lddb ) ) {
@@ -346,7 +346,7 @@ magma_dsygvd(
                          n, n, d_one, dB, lddb, dA, ldda, queue );
         }
         magma_dgetmatrix( n, n, dA, ldda, A, lda, queue );
-        
+
         timer_stop( time );
         timer_printf( "time dtrsm/mm + getmatrix = %6.2f\n", time );
     }

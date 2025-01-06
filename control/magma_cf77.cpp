@@ -1165,7 +1165,7 @@ void magmaf_cheevd_gpu(
         work, *lwork,
         rwork, *lrwork,
         iwork, *liwork,
-        info );
+        info, 0);
 }
 
 #define magmaf_cheevd_m FORTRAN_NAME( magmaf_cheevd_m, MAGMAF_CHEEVD_M )
@@ -1719,7 +1719,7 @@ void magmaf_chetrd_gpu(
         tau,
         wA, *ldwa,
         work, *lwork,
-        info );
+        info, 0);
 }
 
 #define magmaf_chetrd2_gpu FORTRAN_NAME( magmaf_chetrd2_gpu, MAGMAF_CHETRD2_GPU )
@@ -1743,7 +1743,7 @@ void magmaf_chetrd2_gpu(
         wA, *ldwa,
         work, *lwork,
         magma_cdevptr(dwork), *ldwork,
-        info );
+        info, 0);
 }
 
 #define magmaf_chetrd_hb2st FORTRAN_NAME( magmaf_chetrd_hb2st, MAGMAF_CHETRD_HB2ST )
@@ -2171,7 +2171,7 @@ void magmaf_cstedx(
         rwork, *lrwork,
         iwork, *liwork,
         magma_sdevptr(dwork),
-        info );
+        info, 0);
 }
 
 #define magmaf_cstedx_m FORTRAN_NAME( magmaf_cstedx_m, MAGMAF_CSTEDX_M )
@@ -2491,7 +2491,7 @@ void magmaf_cunmql2_gpu(
         tau,
         magma_cdevptr(dC), *lddc,
         wA, *ldwa,
-        info );
+        info, 0);
 }
 
 #define magmaf_cunmqr FORTRAN_NAME( magmaf_cunmqr, MAGMAF_CUNMQR )
@@ -2547,7 +2547,7 @@ void magmaf_cunmqr2_gpu(
         tau,
         magma_cdevptr(dC), *lddc,
         wA, *ldwa,
-        info );
+        info, 0);
 }
 
 #define magmaf_cunmqr_m FORTRAN_NAME( magmaf_cunmqr_m, MAGMAF_CUNMQR_M )
@@ -2601,7 +2601,7 @@ void magmaf_cunmtr_gpu(
         tau,
         magma_cdevptr(dC), *lddc,
         wA, *ldwa,
-        info );
+        info, 0);
 }
 
 #define magmaf_cunmtr_m FORTRAN_NAME( magmaf_cunmtr_m, MAGMAF_CUNMTR_M )
