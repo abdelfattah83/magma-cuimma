@@ -526,6 +526,13 @@ magma_zgesv_gpu(
     magma_int_t *info);
 
 magma_int_t
+magma_zgesv_native_oz(
+    magma_int_t n, magma_int_t nrhs,
+    magmaDoubleComplex_ptr dA, magma_int_t ldda, magma_int_t *ipiv,
+    magmaDoubleComplex_ptr dB, magma_int_t lddb,
+    magma_int_t *info, magma_int_t oz_splits);
+
+magma_int_t
 magma_zgesv_nopiv_gpu(
     magma_int_t n, magma_int_t nrhs,
     magmaDoubleComplex_ptr dA, magma_int_t ldda,
@@ -632,6 +639,13 @@ magma_zgetrf_native(
     magmaDoubleComplex_ptr dA, magma_int_t ldda,
     magma_int_t *ipiv,
     magma_int_t *info );
+
+magma_int_t
+magma_zgetrf_native_oz(
+    magma_int_t m, magma_int_t n,
+    magmaDoubleComplex_ptr dA, magma_int_t ldda,
+    magma_int_t *ipiv,
+    magma_int_t *info, magma_int_t oz_splits);
 
 // CUDA MAGMA only
 magma_int_t

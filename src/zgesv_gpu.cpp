@@ -95,6 +95,47 @@ magma_zgesv_gpu(
     if ( *info == 0 ) {
         magma_zgetrs_gpu( MagmaNoTrans, n, nrhs, dA, ldda, ipiv, dB, lddb, info );
     }
-    
+
     return *info;
 }
+
+
+/////////////////////////////////////////////////////////////////////////////////
+extern "C" magma_int_t
+magma_zgesv_native_oz(
+    magma_int_t n, magma_int_t nrhs,
+    magmaDoubleComplex_ptr dA, magma_int_t ldda, magma_int_t *ipiv,
+    magmaDoubleComplex_ptr dB, magma_int_t lddb,
+    magma_int_t *info, magma_int_t oz_splits)
+{
+    *info = 0;
+    if (n < 0) {
+        *info = -1;
+    } else if (nrhs < 0) {
+        *info = -2;
+    } else if (ldda < max(1,n)) {
+        *info = -4;
+    } else if (lddb < max(1,n)) {
+        *info = -7;
+    }
+    if (*info != 0) {
+        magma_xerbla( __func__, -(*info) );
+        return *info;
+    }
+
+    /* Quick return if possible */
+    if (n == 0 || nrhs == 0) {
+        return *info;
+    }
+
+    //magma_zgetrf_gpu( n, n, dA, ldda, ipiv, info );
+    magma_zgetrf_native_oz(n, n, dA, ldda, ipiv, info, oz_splits);
+
+    if ( *info == 0 ) {
+        magma_zgetrs_gpu( MagmaNoTrans, n, nrhs, dA, ldda, ipiv, dB, lddb, info );
+    }
+
+    return *info;
+}
+
+

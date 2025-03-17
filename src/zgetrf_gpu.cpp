@@ -606,3 +606,73 @@ magma_zgetrf_native(
 
     return *info;
 } /* magma_zgetrf_native */
+
+
+/***************************************************************************//**
+    magma_zgetrf_expert_gpu_work with mode = MagmaNative.
+    Computation is done only on the GPU, not on the CPU.
+    @see magma_zgetrf_expert_gpu_work
+    @ingroup magma_getrf
+*******************************************************************************/
+extern "C" magma_int_t
+magma_zgetrf_native_oz(
+    magma_int_t m, magma_int_t n,
+    magmaDoubleComplex_ptr dA, magma_int_t ldda,
+    magma_int_t *ipiv,
+    magma_int_t *info, magma_int_t oz_splits)
+{
+    magma_device_t cdev;
+    magma_queue_t queues[2];
+    magma_event_t events[2];
+    magma_getdevice( &cdev );
+
+    magma_queue_create( cdev, &queues[0] );
+    magma_queue_create( cdev, &queues[1] );
+    magma_event_create(&events[0]);
+    magma_event_create(&events[1]);
+
+    // set number of splits
+    magma_queue_set_cuimma_nplits(queues[0], oz_splits);
+    magma_queue_set_cuimma_nplits(queues[1], oz_splits);
+
+    magma_mode_t mode = MagmaNative;
+    magma_int_t nb    = magma_get_zgetrf_native_nb( m, n );
+    magma_int_t recnb = 32;
+
+    // query workspace
+    void *hwork = NULL, *dwork=NULL;
+    magma_int_t lhwork[1] = {-1}, ldwork[1] = {-1};
+    magma_zgetrf_expert_gpu_work(
+        m, n, NULL, ldda,
+        NULL, info, mode, nb, recnb,
+        NULL, lhwork, NULL, ldwork,
+        events, queues );
+
+    // alloc workspace
+    if( lhwork[0] > 0 ) {
+        magma_malloc_pinned( (void**)&hwork, lhwork[0] );
+    }
+
+    if( ldwork[0] > 0 ) {
+        magma_malloc( (void**)&dwork, ldwork[0] );
+    }
+
+    magma_zgetrf_expert_gpu_work(
+        m, n, dA, ldda, ipiv, info,
+        mode, nb, recnb,
+        hwork, lhwork, dwork, ldwork,
+        events, queues );
+    magma_queue_sync( queues[0] );
+    magma_queue_sync( queues[1] );
+
+    // free workspace
+    if( hwork != NULL ) magma_free_pinned( hwork );
+    if( dwork != NULL ) magma_free( dwork );
+
+    magma_event_destroy( events[0] );
+    magma_event_destroy( events[1] );
+    magma_queue_destroy( queues[0] );
+    magma_queue_destroy( queues[1] );
+
+    return *info;
+} /* magma_zgetrf_native */
