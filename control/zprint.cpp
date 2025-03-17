@@ -78,9 +78,9 @@ void magma_zprint(
             }
             else {
                 #ifdef COMPLEX
-                printf( " %8.4f+%8.4fi", MAGMA_Z_REAL( *A(i,j) ), MAGMA_Z_IMAG( *A(i,j) ));
+                printf( " %8.4e+%8.4ei", MAGMA_Z_REAL( *A(i,j) ), MAGMA_Z_IMAG( *A(i,j) ));
                 #else
-                printf( " %8.4f", MAGMA_Z_REAL( *A(i,j) ));
+                printf( " %8.4e", MAGMA_Z_REAL( *A(i,j) ));
                 #endif
             }
         }
