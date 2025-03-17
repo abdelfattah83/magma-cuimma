@@ -42,9 +42,12 @@ magma_zgesv_diagonal_scaling_A(
 
 		// make A between [1,2]
 		#pragma omp parallel for
-		for(magma_int_t i = 0; i < sizeA; i++) {
-			hA[i] += 1.;
+		for(magma_int_t j = 0; j < N; j++) {
+		    for(magma_int_t i = 0; i < N; i++) {
+			    hA[j*lda + i] += 1.;
+		    }
 		}
+
 
         double cond_sqrt = sqrt(cond);
         double* hD = NULL, *hVA = NULL;
@@ -163,10 +166,7 @@ int main(int argc, char **argv)
     opts.parse_opts( argc, argv );
 
     double tol = opts.tolerance * lapackf77_dlamch("E");
-
     nrhs = opts.nrhs;
-
-    if(opts.check == 2) opts.lapack = 1;
 
     printf("%%   N  NRHS   CPU Gflop/s (sec)   GPU Gflop/s (sec)   Anorm      Xnorm      ||B - AX|| / N*||A||*||X||\n");
     printf("%%===============================================================================================\n");
@@ -194,14 +194,13 @@ int main(int argc, char **argv)
             sizeB = ldb*nrhs;
 
             // generate A
-            //magma_generate_matrix( opts, N, N, h_A, lda );
+            #if 0
+            magma_generate_matrix( opts, N, N, h_A, lda );
+            #else
+            // generate randomly & scale full or upper part to large values
             lapackf77_zlarnv( &ione, ISEED, &sizeA, h_A );
-
-            // scale upper part to large values
             magma_zgesv_scale_A(N, h_A, lda, opts.cond );
-
-            // diagonal scaling of A
-            //magma_zgesv_diagonal_scaling_A( N, h_A, lda, opts.cond );
+            #endif
 
             // generate B
             lapackf77_zlarnv( &ione, ISEED, &sizeB, h_B ); // [0:1]
@@ -209,8 +208,8 @@ int main(int argc, char **argv)
             #ifdef PRECISION_d
             for(magma_int_t j = 0; j < nrhs; j++) {
                 for(magma_int_t i = 0; i < N; i++) {
-                    //h_B[j * ldb + i] *= 0.1; // [0.0 : 0.1]
-                    //h_B[j * ldb + i] += 0.9; // [0.9 : 1.0]
+                    h_B[j * ldb + i] *= 0.1; // [0.0 : 0.1]
+                    h_B[j * ldb + i] += 0.9; // [0.9 : 1.0]
                 }
             }
             #endif
