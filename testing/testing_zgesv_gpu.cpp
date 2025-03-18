@@ -34,7 +34,6 @@ magma_zgesv_diagonal_scaling_A(
     #ifdef PRECISION_d
     magma_int_t M = N;
     magma_int_t K = N;
-    magma_int_t sizeA = lda * N;
     magma_int_t ione     = 1;
 
     if(cond > COND_THRESHOLD) {
@@ -203,6 +202,26 @@ int main(int argc, char **argv)
             #endif
 
             // generate B
+            #if 1
+            /////////////////////////////////////////////////////////////////////////////
+            // set the solution to be all one’s and generate b = A*x
+            magmaDoubleComplex c_zero     = MAGMA_Z_ZERO;
+            #pragma omp parallel for
+            for(magma_int_t j = 0; j < nrhs; j++) {
+                for(magma_int_t i = 0; i < N; i++) {
+                    h_Xlapack[j * ldb + i] = MAGMA_Z_ONE;
+                }
+            }
+            blasf77_zgemm( MagmaNoTransStr, MagmaNoTransStr, &N, &nrhs, &N,
+                               &c_one,  h_A,       &lda,
+                                        h_Xlapack, &ldb,
+                               &c_zero, h_B,       &ldb);
+
+            // copy h_B to h_Xlapack
+            memcpy(h_Xlapack, h_B, sizeB * sizeof(magmaDoubleComplex));
+
+            #else
+            /////////////////////////////////////////////////////////////////////////////
             lapackf77_zlarnv( &ione, ISEED, &sizeB, h_B ); // [0:1]
             // let B be close to 1
             #ifdef PRECISION_d
@@ -212,8 +231,11 @@ int main(int argc, char **argv)
                     h_B[j * ldb + i] += 0.9; // [0.9 : 1.0]
                 }
             }
-            #endif
+            #endif // PRECISION_d
+            // copy h_B to h_Xlapack
             memcpy(h_Xlapack, h_B, sizeB * sizeof(magmaDoubleComplex));
+
+            #endif
 
             magma_zsetmatrix( N, N,    h_A, lda, d_A, ldda, opts.queue );
             magma_zsetmatrix( N, nrhs, h_B, ldb, d_B, lddb, opts.queue );
@@ -239,6 +261,10 @@ int main(int argc, char **argv)
             // Residual & run LAPACK
             //=====================================================================
             magma_zgetmatrix( N, nrhs, d_B, lddb, h_X, ldb, opts.queue );
+
+            if(N == 4096 && nrhs == 1) {
+                magma_zprint(100, nrhs, h_X, ldb);
+            }
 
             if(opts.check == 1) {
                 Anorm = lapackf77_zlange("I", &N, &N,    h_A, &lda, work);
