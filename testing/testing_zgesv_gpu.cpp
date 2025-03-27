@@ -373,6 +373,9 @@ int main(int argc, char **argv)
             magma_int_t sizeA = lda*N;
             sizeB = ldb*nrhs;
 
+            // check nb
+            if(opts.nb <= 4) opts.nb = 4;
+
             // generate A
             #if 1
             magma_zgesv_generate_A(N, h_A, lda, opts.nb, opts.cond, ISEED);
@@ -431,10 +434,11 @@ int main(int argc, char **argv)
             if(opts.version == 1) {
                 magma_zgesv_gpu( N, nrhs, d_A, ldda, ipiv, d_B, lddb, &info );
             }
-            else {
+            else if (opts.version == 2){
                 magma_zgesv_native_oz(N, nrhs, d_A, ldda, ipiv, d_B, lddb, &info, opts.oz_nsplits);
             }
             else if(opts.version == 3) {
+                magma_zgesv_native_oz_nb(N, nrhs, opts.nb, d_A, ldda, ipiv, d_B, lddb, &info, opts.oz_nsplits);
             }
             gpu_time = magma_wtime() - gpu_time;
             gpu_perf = gflops / gpu_time;
