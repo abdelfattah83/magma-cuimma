@@ -63,13 +63,26 @@ magma_zgesv_diagonal_scaling_A(
         }
 
         // scale columns/row of A for N/T
-        for(magma_int_t ik = 0; ik < K; ik++) {
-            double* hAt      = ( notransA ) ? hA + lda * ik : hA + ik;
-            magma_int_t incA = ( notransA ) ?             1 : lda;
-            blasf77_dscal(&K, &hD[ik], hAt, &incA);
+        if( 0 ) {
+            for(magma_int_t ik = 0; ik < K; ik++) {
+                double* hAt      = ( notransA ) ? hA + lda * ik : hA + ik;
+                magma_int_t incA = ( notransA ) ?             1 : lda;
+                blasf77_dscal(&K, &hD[ik], hAt, &incA);
+            }
         }
 
+        // scale rows/cols of B for N/T
         if( 1 ) {
+            for(magma_int_t ik = 0; ik < K; ik++) {
+                double* hAt      = ( notransA ) ? hA + ik : hA + lda * ik ;
+                magma_int_t incA = ( notransA ) ?     lda : 1;
+                double scal      = hD[ik]; //1 / hD[ik];
+                blasf77_dscal(&K, &scal, hAt, &incA);
+            }
+        }
+
+
+        if( 0 ) {
             // rotate rows/cols right/down of A for N/T
             for(magma_int_t i = 0; i < N; i++) {
                 magma_int_t Vm   = ( notransA ) ? 1 : N;
@@ -141,6 +154,174 @@ magma_zgesv_scale_A(
     #endif
 }
 
+////////////////////////////////////////////////////////////////////////////////
+static void
+magma_zgesv_generate_A(
+    magma_int_t N, magmaDoubleComplex* hA, magma_int_t lda,
+    magma_int_t nb, double cond, magma_int_t *ISEED)
+{
+    // generate a special matrix that results in a badly scaled
+    // schur complement during the first iteration in a blocked factorization
+    // requires knowledge of the used blocking size (nb)
+
+    if(nb <= 0) return;
+
+    if(cond < 1) cond = 1.;
+
+    // constants
+    magmaDoubleComplex c_zero = MAGMA_Z_ZERO;
+    magmaDoubleComplex c_one  = MAGMA_Z_ONE;
+
+    magma_int_t ione     = 1;
+    magma_int_t sizeA    = lda * N;
+    magma_int_t width    = N-nb;
+
+    // generate a random A
+    lapackf77_zlarnv( &ione, ISEED, &sizeA, hA );
+
+    if(N == 16 && nb == 4) {
+        printf("org\n");
+        magma_zprint(N, N, hA, lda);
+    }
+
+    // TODO: maybe make A between 1:2 ?
+
+    // prepare a diagonal matrix with large dynamic range based on cond
+    double cond_sqrt = sqrt(cond);
+    magmaDoubleComplex* hD = NULL;
+    TESTING_CHECK( magma_zmalloc_cpu( &hD,  nb ));
+    double scalar = pow( cond, 1/double(nb-1) );
+    hD[0] = MAGMA_Z_MAKE(cond_sqrt, MAGMA_D_ZERO);
+    for(magma_int_t iD = 1; iD < nb; iD++) {
+        hD[iD] = hD[iD-1] / scalar;
+    }
+
+    if(N == 16 && nb == 4) {
+        printf("hD\n");
+        magma_zprint(1, nb, hD, 1);
+    }
+
+    // copy the panel into a workspace
+    magmaDoubleComplex *hPanel = NULL;
+    magma_zmalloc_cpu(&hPanel, N * nb);
+    lapackf77_zlacpy("F", &N, &nb, hA, &lda, hPanel, &N);
+
+    if(N == 16 && nb == 4) {
+        printf("hPanel\n");
+        magma_zprint(N, nb, hPanel, N);
+    }
+
+    // perform LU factorization on the panel
+    magma_int_t *ipiv = NULL;
+    magma_int_t info;
+    magma_imalloc_cpu(&ipiv, nb);
+    lapackf77_zgetrf(&N, &nb, hPanel, &N, ipiv, &info);
+
+    if(N == 16 && nb == 4) {
+        printf("LU on hPanel\n");
+        magma_zprint(N, nb, hPanel, N);
+    }
+
+    // generate a permutation vector based on ipiv
+    magma_int_t *ipermute = NULL;
+    magma_imalloc_cpu(&ipermute, N);
+    #pragma omp parallel for
+    for(magma_int_t i = 0; i < N; i++) ipermute[i] = i;
+
+    for(magma_int_t i = 0; i < nb; i++) {
+        magma_int_t pivot = ipiv[i] - 1; // undo fortran indexing
+
+        // swap
+        magma_int_t tmp = ipermute[i];
+        ipermute[i]     = ipermute[ pivot ];
+        ipermute[pivot] = tmp;
+    }
+
+    if(N == 16 && nb == 4) {
+        printf("iPermute\n");
+        magma_iprint(1, N, ipermute, 1);
+    }
+
+
+    // generate the "inverse permutation matrix"
+    // the permutation matrix has exactly one entry per row set to '1', decided by permutation vector
+    // its matrix is equal to its transpose (one entry per column set to '1')
+    magmaDoubleComplex *hPermute = NULL;
+    magma_zmalloc_cpu(&hPermute, N*N);
+    memset(hPermute, 0, N*N*sizeof(magmaDoubleComplex));
+    for(magma_int_t j = 0; j < N; j++) {
+        hPermute[j * N + ipermute[j]] = MAGMA_Z_ONE;
+    }
+
+    if(N == 16 && nb == 4) {
+        printf("hPermute\n");
+        magma_zprint(N, N, hPermute, N);
+    }
+
+    // scale A[1:nb, nb+1:N] using hD
+    magma_int_t scal_length = width;
+    for(magma_int_t j = 0; j < nb; j++) {
+        magmaDoubleComplex* hAt = hA + nb * lda + j;
+        blasf77_zscal(&scal_length, &hD[j], hAt, &lda);
+    }
+
+    if(N == 16 && nb == 4) {
+        printf("After diagonal scaling\n");
+        magma_zprint(N, N, hA, lda);
+    }
+
+
+    // undo trsm, multiply the square part of the 'L' factor with A[1:nb, nb+1:N]
+    blasf77_ztrmm( lapack_side_const(MagmaLeft), lapack_uplo_const(MagmaLower),
+                   lapack_trans_const(MagmaNoTrans), lapack_diag_const(MagmaUnit),
+                   &nb, &width, &c_one,
+                   hPanel, &N, hA + nb * lda, &lda);
+
+    if(N == 16 && nb == 4) {
+        printf("After trmm\n");
+        magma_zprint(N, N, hA, lda);
+    }
+
+    // undo pivoting, pre-multiply A[1:N, nb+1 : N] with the inverse permutation matrix
+    // copy A[1:N, nb+1 : N] into hTmp then: hPermute x hTmp ==> A[1:N, nb+1 : N]
+    magmaDoubleComplex *hTmp = NULL;
+    magma_zmalloc_cpu(&hTmp, N * (N-nb));
+    lapackf77_zlacpy ("F", &N, &width, hA + nb*lda, &lda, hTmp, &N);
+    blasf77_zgemm( lapack_trans_const(MagmaNoTrans), lapack_trans_const(MagmaNoTrans),
+                     &N, &width, &N,
+                     &c_one,  hPermute,    &N,
+                              hTmp,        &N,
+                     &c_zero, hA + nb*lda, &lda);
+
+    if(N == 16 && nb == 4) {
+        printf("After gemm with permutation matrix\n");
+        magma_zprint(N, N, hA, lda);
+    }
+
+    #if 1
+    // For testing only
+    lapackf77_zlaswp(&width, hA + nb * lda, &lda, &ione, &nb, ipiv, &ione);
+    blasf77_ztrsm( lapack_side_const(MagmaLeft), lapack_uplo_const(MagmaLower),
+                   lapack_trans_const(MagmaNoTrans), lapack_diag_const(MagmaUnit),
+                   &nb, &width, &c_one,
+                   hPanel, &N, hA + nb * lda, &lda);
+
+
+    if(N == 16 && nb == 4) {
+        printf("before 1st schur complement\n");
+        magma_zprint(N, N, hA, lda);
+    }
+    #endif
+
+    magma_free_cpu( hD );
+    magma_free_cpu( hPanel );
+    magma_free_cpu( ipiv );
+    magma_free_cpu( ipermute );
+    magma_free_cpu( hPermute );
+    magma_free_cpu( hTmp );
+
+}
+
 /* ////////////////////////////////////////////////////////////////////////////
    -- Testing zgesv_gpu
 */
@@ -193,16 +374,18 @@ int main(int argc, char **argv)
             sizeB = ldb*nrhs;
 
             // generate A
-            #if 0
-            magma_generate_matrix( opts, N, N, h_A, lda );
+            #if 1
+            magma_zgesv_generate_A(N, h_A, lda, opts.nb, opts.cond, ISEED);
+            //magma_generate_matrix( opts, N, N, h_A, lda );
             #else
             // generate randomly & scale full or upper part to large values
             lapackf77_zlarnv( &ione, ISEED, &sizeA, h_A );
-            magma_zgesv_scale_A(N, h_A, lda, opts.cond );
+            //magma_zgesv_scale_A(N, h_A, lda, opts.cond );
+            magma_zgesv_diagonal_scaling_A(N, h_A, lda, opts.cond );
             #endif
 
             // generate B
-            #if 1
+            #if 0
             /////////////////////////////////////////////////////////////////////////////
             // set the solution to be all one’s and generate b = A*x
             magmaDoubleComplex c_zero     = MAGMA_Z_ZERO;
@@ -222,13 +405,14 @@ int main(int argc, char **argv)
 
             #else
             /////////////////////////////////////////////////////////////////////////////
-            lapackf77_zlarnv( &ione, ISEED, &sizeB, h_B ); // [0:1]
             // let B be close to 1
+            lapackf77_zlarnv( &ione, ISEED, &sizeB, h_B ); // [0:1]
             #ifdef PRECISION_d
             for(magma_int_t j = 0; j < nrhs; j++) {
                 for(magma_int_t i = 0; i < N; i++) {
                     h_B[j * ldb + i] *= 0.1; // [0.0 : 0.1]
                     h_B[j * ldb + i] += 0.9; // [0.9 : 1.0]
+                    h_B[j * ldb + i] /= opts.cond; // [0.9 : 1.0]
                 }
             }
             #endif // PRECISION_d
@@ -250,6 +434,8 @@ int main(int argc, char **argv)
             else {
                 magma_zgesv_native_oz(N, nrhs, d_A, ldda, ipiv, d_B, lddb, &info, opts.oz_nsplits);
             }
+            else if(opts.version == 3) {
+            }
             gpu_time = magma_wtime() - gpu_time;
             gpu_perf = gflops / gpu_time;
             if (info != 0) {
@@ -262,9 +448,9 @@ int main(int argc, char **argv)
             //=====================================================================
             magma_zgetmatrix( N, nrhs, d_B, lddb, h_X, ldb, opts.queue );
 
-            if(N == 4096 && nrhs == 1) {
-                magma_zprint(100, nrhs, h_X, ldb);
-            }
+            //if(N == 4096 && nrhs == 1) {
+            //   magma_zprint(100, nrhs, h_X, ldb);
+            //}
 
             if(opts.check == 1) {
                 Anorm = lapackf77_zlange("I", &N, &N,    h_A, &lda, work);

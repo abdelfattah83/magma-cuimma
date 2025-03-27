@@ -79,8 +79,8 @@ int main( int argc, char** argv)
     magmaDoubleComplex *hA, *hB, *hC, *hCmagma, *hCdev;
     magmaDoubleComplex_ptr dA, dB, dC;
     magmaDoubleComplex c_neg_one = MAGMA_Z_NEG_ONE;
-    magmaDoubleComplex alpha = MAGMA_Z_ONE; //MAGMA_Z_MAKE(  0.29, -0.86 );
-    magmaDoubleComplex beta  = MAGMA_Z_ZERO; //MAGMA_Z_MAKE( -0.48,  0.38 );
+    magmaDoubleComplex alpha = c_neg_one; //MAGMA_Z_MAKE(  0.29, -0.86 );
+    magmaDoubleComplex beta  = MAGMA_Z_ONE; //MAGMA_Z_MAKE( -0.48,  0.38 );
 
     // used only with CUDA
     MAGMA_UNUSED( magma_perf );
@@ -170,10 +170,10 @@ int main( int argc, char** argv)
                 bool notransB = (opts.transB == MagmaNoTrans) ? true : false;
 
 				// make A between [1,2]
-				#pragma omp parallel for
-				for(magma_int_t i = 0; i < sizeA; i++) {
-					hA[i] += 1.;
-				}
+				//#pragma omp parallel for
+				//for(magma_int_t i = 0; i < sizeA; i++) {
+				//	hA[i] += 1.;
+				//}
 
 				// make B between [1,2]
 				#pragma omp parallel for
@@ -195,6 +195,8 @@ int main( int argc, char** argv)
                 if(M == 8 && N == 8 && K == 8) {
                     magma_dprint(Am, An, hA, lda);
                 }
+
+                #if 0
                 // scale columns/row of A for N/T
                 for(magma_int_t ik = 0; ik < K; ik++) {
                     double* hAt      = ( notransA ) ? hA + lda * ik : hA + ik;
@@ -223,6 +225,7 @@ int main( int argc, char** argv)
                         lapackf77_dlacpy( "F", &Vm,  &Vn,  hVA, &vlda, hA0,     &lda );
                     }
                 }
+                #endif
 
                 if(M == 8 && N == 8 && K == 8) {
                     magma_dprint(Am, An, hA, lda);
@@ -237,10 +240,10 @@ int main( int argc, char** argv)
                     double* hBt      = ( notransB ) ? hB + ik : hB + ldb * ik ;
                     magma_int_t incB = ( notransB ) ?     ldb : 1;
                     double scal      = 1 / hD[ik];
-                    blasf77_dscal(&K, &scal, hBt, &incB);
+                    blasf77_dscal(&N, &scal, hBt, &incB);
                 }
 
-                if(M == N && M == K) {
+                if(M == N && M == K && 0) {
                     // rotate cols/rows down/right of B for N/T
                     for(magma_int_t i = 0; i < N; i++) {
                         magma_int_t Vm   = ( notransB ) ? N : 1;
@@ -308,6 +311,10 @@ int main( int argc, char** argv)
 
                 magma_zgetmatrix( M, N, dC, lddc, hCmagma, ldc, opts.queue );
             #endif
+
+            if(M == 8 && N == 8 && K == 8) {
+                magma_zprint(M, N, hCmagma, ldc);
+            }
 
             /* =====================================================================
                Performs operation using CUBLAS / hipBLAS
